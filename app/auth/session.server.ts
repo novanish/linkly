@@ -5,11 +5,11 @@ import {
   type CookieOptions,
 } from 'react-router';
 import { z } from 'zod';
-import { db } from '~/db';
 import { redisClient } from '~/db/redis.server';
 import { env } from '~/env/server';
 import { APP_NAME } from '~/lib/consts';
 import { sec } from '~/lib/utils';
+import { getUserById } from '~/models/users.server';
 
 const SessionDataSchema = z.object({
   userId: z.string(),
@@ -167,9 +167,7 @@ async function getLoggedInUser(request: Request) {
   const userId = await getLoggedInUserId(request);
   if (userId == null) return null;
 
-  return db.query.users.findFirst({
-    where: (users, { eq }) => eq(users.id, userId),
-  });
+  return getUserById(userId);
 }
 
 async function requireAuth(
@@ -179,7 +177,7 @@ async function requireAuth(
   const user = await getLoggedInUser(request);
   if (!user) {
     const searchParams = new URLSearchParams([['redirectTo', redirectTo]]);
-    throw redirect(`/login?${searchParams}`);
+    throw redirect(`/auth/login?${searchParams}`);
   }
 
   return user;
@@ -204,6 +202,11 @@ async function destroyAllSessionsForUser(userId: string) {
   await pipeline.exec();
 }
 
+async function redirectIfLoggedIn(request: Request) {
+  const userId = await getLoggedInUserId(request);
+  if (userId !== null) throw redirect('/dashboard/overview');
+}
+
 export const authSession = {
   create: createUserSession,
   get: getUserSession,
@@ -212,4 +215,5 @@ export const authSession = {
   require: requireAuth,
   destroy: destroyUserSession,
   destroyAllForUser: destroyAllSessionsForUser,
+  redirectIfLoggedIn,
 };
