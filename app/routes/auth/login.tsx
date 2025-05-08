@@ -1,6 +1,6 @@
 import { Link2, Loader2, Mail } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Form, Link, useNavigation } from 'react-router';
+import { Form, Link, redirect, useNavigation } from 'react-router';
 import { Footer } from '~/components/footer';
 import { Button } from '~/components/ui/button';
 import {
@@ -16,8 +16,16 @@ import { APP_NAME } from '~/lib/consts';
 import { sendMagicLinkEmail } from '~/lib/email.server';
 import { generateMagicLink } from '~/lib/magic-link.server';
 import type { Route } from './+types/login';
+import { authSession } from '~/auth/session.server';
+
+export async function loader({ request }: Route.LoaderArgs) {
+  await authSession.redirectIfLoggedIn(request);
+  return null;
+}
 
 export async function action({ request }: Route.ActionArgs) {
+  await authSession.redirectIfLoggedIn(request);
+
   const formData = await request.formData();
   const email = formData.get('email')?.toString() || '';
 

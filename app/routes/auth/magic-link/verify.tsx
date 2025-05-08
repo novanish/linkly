@@ -66,6 +66,7 @@ export default function MagicLinkErrorPage() {
             <Link2 className="h-6 w-6 text-rose-500" />
             <span className="text-xl font-bold">{APP_NAME}</span>
           </Link>
+        </div>
       </header>
 
       <main className="flex flex-1 items-center justify-center p-4 md:p-8">
