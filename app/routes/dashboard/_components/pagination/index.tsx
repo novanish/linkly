@@ -22,7 +22,7 @@ export function PerPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const page = Number(searchParams.get('p')) || 1;
   const itemsPerPage = Number(searchParams.get('pp')) || 7;
-  const indexOfLastItem = page * itemsPerPage;
+  const indexOfLastItem = Math.min(page * itemsPerPage, totalLinks);
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
 
   return (
@@ -33,7 +33,9 @@ export function PerPage() {
       <Select
         value={itemsPerPage.toString()}
         onValueChange={(value) => {
-          setSearchParams('p=1&pp=' + value);
+          const firstItemPosition = (page - 1) * itemsPerPage + 1;
+          const newPage = Math.ceil(firstItemPosition / Number(value));
+          setSearchParams('p=' + newPage + '&pp=' + value);
         }}
       >
         <SelectTrigger className="h-8 w-[70px]">
@@ -108,8 +110,8 @@ function generatePagination(
 
   pagination.push(1);
 
-  let rangeStart = Math.max(2, currentPage - displayedPages);
-  let rangeEnd = Math.min(totalPages - 1, currentPage + displayedPages);
+  const rangeStart = Math.max(2, currentPage - displayedPages);
+  const rangeEnd = Math.min(totalPages - 1, currentPage + displayedPages);
 
   if (rangeStart > 2) {
     pagination.push('...');

@@ -1,61 +1,165 @@
-import { BarChart2, Clock, Link2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
-import { getPercentageChange } from '~/lib/utils';
+import { TrendingDownIcon, TrendingUpIcon } from 'lucide-react';
+import { Badge } from '~/components/ui/badge';
+import {
+  Card,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '~/components/ui/card';
 import { useOverviewLoaderData } from '../../overview';
 
+function calculateTrend(current: number, previous: number) {
+  if (previous === 0) {
+    return current > 0 ? 100 : 0;
+  }
+  return ((current - previous) / previous) * 100;
+}
+
 export function OverviewStats() {
-  const { weeklyLinkStats, linkClickStats, totalClicksInLast24Hours } =
-    useOverviewLoaderData();
-  const isIncreaseInClicks =
-    linkClickStats.thisMonth > linkClickStats.lastMonth;
-  const percentageChange = getPercentageChange(
-    linkClickStats.lastMonth,
-    linkClickStats.thisMonth,
+  const { stats } = useOverviewLoaderData();
+
+  const newLinksTrend = calculateTrend(
+    stats.newLinksThisMonth,
+    stats.newLinksLastMonth,
+  );
+  const clicksThisMonthTrend = calculateTrend(
+    stats.clicksThisMonth,
+    stats.clicksLastMonth,
+  );
+  const clicksLast24HoursTrend = calculateTrend(
+    stats.clicksLast24Hours,
+    stats.clicksPrevious24Hours,
+  );
+  const weeklyClicksTrend = calculateTrend(
+    stats.clicksCurrentWeek,
+    stats.clicksPreviousWeek,
   );
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-sm font-medium">Total Links</CardTitle>
-          <Link2 className="text-muted-foreground h-4 w-4" />
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <Card className="@container/card" data-slot="card">
+        <CardHeader className="relative">
+          <CardDescription>New Links This Month</CardDescription>
+          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+            {stats.newLinksThisMonth}
+          </CardTitle>
+          <div className="absolute top-4 right-4">
+            <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
+              {newLinksTrend >= 0 ? (
+                <TrendingUpIcon className="size-3" />
+              ) : (
+                <TrendingDownIcon className="size-3" />
+              )}
+              {newLinksTrend.toFixed(1)}%
+            </Badge>
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{weeklyLinkStats.thisWeek}</div>
-          <p className="text-muted-foreground text-xs">
-            +{weeklyLinkStats.thisWeek - weeklyLinkStats.lastWeek} from last
-            week
-          </p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-sm font-medium">Total Clicks</CardTitle>
-          <BarChart2 className="text-muted-foreground h-4 w-4" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{linkClickStats.thisMonth}</div>
-          {percentageChange ? (
-            <p className="text-muted-foreground text-xs">
-              %{percentageChange} {isIncreaseInClicks ? 'increase' : 'decrease'}{' '}
-              from last month
-            </p>
-          ) : null}
-        </CardContent>
+        <CardFooter className="flex-col items-start gap-1 text-sm">
+          <div className="line-clamp-1 flex gap-2 font-medium">
+            {newLinksTrend >= 0 ? 'Increasing' : 'Decreasing'} link creation
+            {newLinksTrend >= 0 ? (
+              <TrendingUpIcon className="size-4" />
+            ) : (
+              <TrendingDownIcon className="size-4" />
+            )}
+          </div>
+          <div className="text-muted-foreground">Compared to last month</div>
+        </CardFooter>
       </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
-          <Clock className="text-muted-foreground h-4 w-4" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {totalClicksInLast24Hours}{' '}
-            {totalClicksInLast24Hours > 1 ? 'Clicks' : 'Click'}
+      <Card className="@container/card" data-slot="card">
+        <CardHeader className="relative">
+          <CardDescription>Clicks This Month</CardDescription>
+          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+            {stats.clicksThisMonth}
+          </CardTitle>
+          <div className="absolute top-4 right-4">
+            <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
+              {clicksThisMonthTrend >= 0 ? (
+                <TrendingUpIcon className="size-3" />
+              ) : (
+                <TrendingDownIcon className="size-3" />
+              )}
+              {clicksThisMonthTrend.toFixed(1)}%
+            </Badge>
           </div>
-          <p className="text-muted-foreground text-xs">In the last 24 hours</p>
-        </CardContent>
+        </CardHeader>
+        <CardFooter className="flex-col items-start gap-1 text-sm">
+          <div className="line-clamp-1 flex gap-2 font-medium">
+            {clicksThisMonthTrend >= 0 ? 'Increasing' : 'Decreasing'} traffic
+            {clicksThisMonthTrend >= 0 ? (
+              <TrendingUpIcon className="size-4" />
+            ) : (
+              <TrendingDownIcon className="size-4" />
+            )}
+          </div>
+          <div className="text-muted-foreground">Compared to last month</div>
+        </CardFooter>
+      </Card>
+
+      <Card className="@container/card" data-slot="card">
+        <CardHeader className="relative">
+          <CardDescription>Weekly Clicks</CardDescription>
+          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+            {stats.clicksCurrentWeek}
+          </CardTitle>
+          <div className="absolute top-4 right-4">
+            <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
+              {weeklyClicksTrend >= 0 ? (
+                <TrendingUpIcon className="size-3" />
+              ) : (
+                <TrendingDownIcon className="size-3" />
+              )}
+              {weeklyClicksTrend.toFixed(1)}%
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardFooter className="flex-col items-start gap-1 text-sm">
+          <div className="line-clamp-1 flex gap-2 font-medium">
+            {weeklyClicksTrend >= 0 ? 'Increasing' : 'Decreasing'} weekly
+            traffic
+            {weeklyClicksTrend >= 0 ? (
+              <TrendingUpIcon className="size-4" />
+            ) : (
+              <TrendingDownIcon className="size-4" />
+            )}
+          </div>
+          <div className="text-muted-foreground">Compared to last week</div>
+        </CardFooter>
+      </Card>
+
+      <Card className="@container/card" data-slot="card">
+        <CardHeader className="relative">
+          <CardDescription>Recent Clicks (Last 24 Hours)</CardDescription>
+          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+            {stats.clicksLast24Hours}
+          </CardTitle>
+          <div className="absolute top-4 right-4">
+            <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
+              {clicksLast24HoursTrend >= 0 ? (
+                <TrendingUpIcon className="size-3" />
+              ) : (
+                <TrendingDownIcon className="size-3" />
+              )}
+              {clicksLast24HoursTrend.toFixed(1)}%
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardFooter className="flex-col items-start gap-1 text-sm">
+          <div className="line-clamp-1 flex gap-2 font-medium">
+            {clicksLast24HoursTrend >= 0 ? 'Increasing' : 'Decreasing'} recent
+            activity
+            {clicksLast24HoursTrend >= 0 ? (
+              <TrendingUpIcon className="size-4" />
+            ) : (
+              <TrendingDownIcon className="size-4" />
+            )}
+          </div>
+          <div className="text-muted-foreground">
+            Compared to previous 24 hours
+          </div>
+        </CardFooter>
       </Card>
     </div>
   );

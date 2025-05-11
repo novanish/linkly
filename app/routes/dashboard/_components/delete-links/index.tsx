@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from '~/components/ui/alert-dialog';
 import { Button } from '~/components/ui/button';
+import { ACTION_NAME } from '~/lib/consts';
 
 interface Props {
   linkId: string;
@@ -43,16 +44,14 @@ export function DeleteDialog({
           <AlertDialogAction asChild>
             <Button
               disabled={isDeleting}
-              type="submit"
-              name="__action"
               value={actionValue}
-              onClick={async (e) => {
+              onClick={(e) => {
                 e.preventDefault();
                 const data = {
-                  __action: actionValue,
+                  [ACTION_NAME]: actionValue,
                   linkId,
                 };
-                await fetcher.submit(data, { method: 'POST' });
+                fetcher.submit(data, { method: 'POST' });
               }}
             >
               {isDeleting ? (
