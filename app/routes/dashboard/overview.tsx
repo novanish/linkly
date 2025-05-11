@@ -25,12 +25,11 @@ import {
   TableHeader,
   TableRow,
 } from '~/components/ui/table';
+import { ACTION_NAME } from '~/lib/consts';
 import { getShortUrl } from '~/lib/utils';
 import {
-  getLinkClickCountStats,
   getTopLinks,
-  getTotalClicksInLast24Hours,
-  getWeeklyLinkStatsByUser,
+  getUserStats,
   updateLinkActiveStatus,
 } from '~/models/links.server';
 import type { Route } from './+types/overview';
@@ -39,19 +38,14 @@ import { OverviewStats } from './_components/stats/overview';
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await authSession.require(request);
 
-  const [topLinks, weeklyLinkStats, linkClickStats, totalClicksInLast24Hours] =
-    await Promise.all([
-      getTopLinks(user.id),
-      getWeeklyLinkStatsByUser(user.id),
-      getLinkClickCountStats(user.id),
-      getTotalClicksInLast24Hours(user.id),
-    ]);
+  const [topLinks, stats] = await Promise.all([
+    getTopLinks(user.id),
+    getUserStats(user.id),
+  ]);
 
   return {
     topLinks,
-    weeklyLinkStats,
-    linkClickStats,
-    totalClicksInLast24Hours,
+    stats,
   };
 }
 
@@ -62,7 +56,7 @@ const ACTION = {
 export async function action({ request }: Route.ActionArgs) {
   const user = await authSession.require(request);
   const formData = await request.formData();
-  const action = formData.get('__action');
+  const action = formData.get(ACTION_NAME);
 
   switch (action) {
     case ACTION.UPDATE_LINK_ACTIVE_STATUS: {
@@ -183,7 +177,7 @@ function ActiveStatusSwitch({
     <fetcher.Form method="POST">
       <input
         type="hidden"
-        name="__action"
+        name={ACTION_NAME}
         value={ACTION.UPDATE_LINK_ACTIVE_STATUS}
       />
       <input type="hidden" name="linkId" value={linkId} />
@@ -198,7 +192,7 @@ function ActiveStatusSwitch({
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({ formData }) => {
-  const action = formData?.get('__action');
+  const action = formData?.get(ACTION_NAME);
   return action !== ACTION.UPDATE_LINK_ACTIVE_STATUS;
 };
 
