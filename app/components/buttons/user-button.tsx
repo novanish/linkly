@@ -18,8 +18,6 @@ interface Props {
 }
 
 export function UserButton({ email, avatarUrl, name }: Props) {
-  name = 'Anish Chhetri';
-
   const initials = name
     ? name
         .split(' ')

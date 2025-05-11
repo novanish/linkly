@@ -3,7 +3,7 @@ import { APP_NAME } from '~/lib/consts';
 
 export function Footer() {
   return (
-    <footer className="border-t py-6">
+    <footer className="mt-7 border-t py-6">
       <div className="container flex flex-col items-center justify-center gap-4 text-center">
         <div className="flex items-center gap-2">
           <Link2 className="h-5 w-5 text-rose-500" />
