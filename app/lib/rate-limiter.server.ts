@@ -8,76 +8,67 @@ class FixedWindowRateLimiter implements RateLimiter {
     identifier: string,
     options: RateLimiterOptions,
   ): Promise<RateLimiterResponse> {
-    return this.getRateLimitInfo(identifier, options, false);
+    const key = this.getKey(identifier, options.name);
+    const tx = this.redis.multi();
+    tx.get(key);
+    tx.ttl(key);
+    const result = await tx.exec();
+
+    if (!result) {
+      throw new Error('Failed to get rate limit info');
+    }
+    const [countErr, count] = result[0];
+    const [ttlErr, ttl] = result[1];
+    if (countErr || ttlErr) {
+      throw new Error('Failed to get rate limit info');
+    }
+
+    if (count == null) {
+      return {
+        isAllowed: true,
+        remainingRequests: options.limit,
+        retryAfter: 10,
+      };
+    }
+
+    const parsedCount = Number(count);
+    const parsedTTL = ttl ? Number(ttl) : 0;
+
+    return {
+      isAllowed: parsedCount <= options.limit,
+      remainingRequests: Math.max(0, options.limit - parsedCount),
+      retryAfter: parsedTTL,
+    };
   }
 
   async consume(
     identifier: string,
     options: RateLimiterOptions,
   ): Promise<RateLimiterResponse> {
-    return this.getRateLimitInfo(identifier, options, true);
-  }
-
-  private async getRateLimitInfo(
-    identifier: string,
-    options: RateLimiterOptions,
-    shouldConsume = false,
-  ): Promise<RateLimiterResponse> {
     const key = this.getKey(identifier, options.name);
-    const result = await this.redis
-      .multi()
-      .set(key, options.limit, 'EX', options.duration, 'NX')
-      .get(key)
-      .ttl(key)
-      .exec();
+    const count = await this.redis.get(key);
+    const parsedCount = count ? Number(count) : 0;
+    const isAllowed = parsedCount <= options.limit;
 
-    if (!result) throw new Error('Failed to get rate limit data');
-
-    const [getErr, value] = result[1];
-    const [ttlErr, ttl] = result[2];
-
-    if (getErr || ttlErr) {
-      throw new Error('Failed to get rate limit data');
+    const tx = this.redis.multi();
+    if (isAllowed) {
+      tx.incr(key);
+      tx.expire(key, options.duration, 'NX');
+      await tx.exec();
     }
 
-    let remainingRequests = this.parseNumber(value, 0);
-    let parsedTtl = this.parseNumber(ttl, -2);
-
-    if (parsedTtl === -2) {
-      await this.redis.set(key, options.limit, 'EX', options.duration);
-      remainingRequests = options.limit;
-      parsedTtl = options.duration;
-    }
-
-    if (shouldConsume && remainingRequests > 0) {
-      remainingRequests -= 1;
-      await this.redis.decr(key);
-    }
-
-    return {
-      canRequest: remainingRequests > 0,
-      remainingRequests,
-      retryAfter: parsedTtl,
-    };
+    return this.check(identifier, options);
   }
 
   private getKey(identifier: string, name: string) {
     return `rate-limiter:${identifier}:${name}`;
-  }
-
-  private parseNumber(value: unknown, fallback: number): number {
-    if (typeof value === 'number') return value;
-    if (typeof value === 'string' && !isNaN(parseInt(value, 10))) {
-      return parseInt(value, 10);
-    }
-    return fallback;
   }
 }
 
 export const rateLimiter = new FixedWindowRateLimiter(redisClient);
 
 export interface RateLimiterResponse {
-  canRequest: boolean;
+  isAllowed: boolean;
   remainingRequests: number;
   retryAfter?: number;
 }
