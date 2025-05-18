@@ -1,13 +1,14 @@
 import { Link2, Plus } from 'lucide-react';
+import { NuqsAdapter } from 'nuqs/adapters/react-router/v7';
 import { Link, Outlet } from 'react-router';
+import { authSession } from '~/auth/session.server';
 import { UserButton } from '~/components/buttons/user-button';
 import { Footer } from '~/components/footer';
 import { Button } from '~/components/ui/button';
 import { Dialog, DialogTrigger } from '~/components/ui/dialog';
 import { APP_NAME } from '~/lib/consts';
-import { DashboardSubNav } from './_components/nav/sub-nav';
 import type { Route } from './+types/layout';
-import { authSession } from '~/auth/session.server';
+import { DashboardSubNav } from './_components/nav/sub-nav';
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await authSession.require(request);
@@ -51,7 +52,9 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
 
           <DashboardSubNav />
 
-          <Outlet />
+          <NuqsAdapter>
+            <Outlet />
+          </NuqsAdapter>
         </div>
       </main>
       <Footer />

@@ -1,5 +1,3 @@
-import { SelectTrigger } from '@radix-ui/react-select';
-import { useSearchParams } from 'react-router';
 import {
   Pagination,
   PaginationContent,
@@ -13,15 +11,16 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectTrigger,
   SelectValue,
 } from '~/components/ui/select';
+import { usePagination } from '~/hooks/use-pagination';
 import { useLinksLoaderData } from '../../links';
 
 export function PerPage() {
   const { totalLinks } = useLinksLoaderData();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const page = Number(searchParams.get('p')) || 1;
-  const itemsPerPage = Number(searchParams.get('pp')) || 7;
+  const { pagination, setPagination } = usePagination();
+  const { page, itemsPerPage } = pagination;
   const indexOfLastItem = Math.min(page * itemsPerPage, totalLinks);
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
 
@@ -35,7 +34,10 @@ export function PerPage() {
         onValueChange={(value) => {
           const firstItemPosition = (page - 1) * itemsPerPage + 1;
           const newPage = Math.ceil(firstItemPosition / Number(value));
-          setSearchParams('p=' + newPage + '&pp=' + value);
+          setPagination({
+            itemsPerPage: Number(value),
+            page: newPage,
+          });
         }}
       >
         <SelectTrigger className="h-8 w-[70px]">
@@ -55,19 +57,27 @@ export function PerPage() {
 
 export function LinksPagination() {
   const { totalLinks } = useLinksLoaderData();
-  const [searchParams] = useSearchParams();
-  const page = Number(searchParams.get('p')) || 1;
-  const itemsPerPage = Number(searchParams.get('pp')) || 7;
-  const pagination = generatePagination(totalLinks, itemsPerPage, page);
+  const { pagination, serialize } = usePagination();
+  const { page, itemsPerPage } = pagination;
+  const paginationPages = generatePaginationPages(
+    totalLinks,
+    itemsPerPage,
+    page,
+  );
 
   return (
     <Pagination>
       <PaginationContent>
         <PaginationItem>
-          <PaginationPrevious prefetch="intent" to={`?p=${page - 1}`} />
+          <PaginationPrevious
+            prefetch="intent"
+            to={{ search: serialize({ page: page - 1 }) }}
+            replace
+            preventScrollReset
+          />
         </PaginationItem>
 
-        {pagination.map((item, index) => {
+        {paginationPages.map((item, index) => {
           return (
             <PaginationItem key={index}>
               {item === '...' ? (
@@ -75,8 +85,12 @@ export function LinksPagination() {
               ) : (
                 <PaginationLink
                   prefetch="intent"
-                  to={`?p=${item}`}
+                  to={{
+                    search: serialize({ page: item }),
+                  }}
                   isActive={item === page}
+                  replace
+                  preventScrollReset
                 >
                   {item}
                 </PaginationLink>
@@ -86,14 +100,19 @@ export function LinksPagination() {
         })}
 
         <PaginationItem>
-          <PaginationNext prefetch="intent" to={`?p=${page + 1}`} />
+          <PaginationNext
+            prefetch="intent"
+            to={{ search: serialize({ page: page + 1 }) }}
+            replace
+            preventScrollReset
+          />
         </PaginationItem>
       </PaginationContent>
     </Pagination>
   );
 }
 
-function generatePagination(
+function generatePaginationPages(
   totalItems: number,
   itemsPerPage: number,
   currentPage: number = 1,
