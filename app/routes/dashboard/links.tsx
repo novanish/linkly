@@ -197,6 +197,11 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({ formData }) => {
   return formData?.get(ACTION_NAME) !== ACTION.UPDATE_LINK_ACTIVE_STATUS;
 };
 
+export const meta: Route.MetaFunction = () => [
+  { title: 'My Links - Dashboard' },
+  { name: 'description', content: 'Manage your shortened links' },
+];
+
 interface ActiveStatusSwitchProps {
   shortUrl: string;
   isActive: boolean;

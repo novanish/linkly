@@ -1,21 +1,21 @@
 import { BarChart2, Link2 } from 'lucide-react';
-import { NavLink } from 'react-router';
+import { href, NavLink } from 'react-router';
 import { cn } from '~/lib/utils';
 
 const items = [
   {
     title: 'Overview',
-    href: '/dashboard/overview',
+    href: href('/dashboard/overview'),
     icon: <Link2 className="h-4 w-4" />,
   },
   {
     title: 'My Links',
-    href: '/dashboard/links',
+    href: href('/dashboard/links'),
     icon: <Link2 className="h-4 w-4" />,
   },
   {
     title: 'Analytics',
-    href: '/dashboard/analytics',
+    href: href('/dashboard/analytics'),
     icon: <BarChart2 className="h-4 w-4" />,
   },
 ];

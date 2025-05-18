@@ -1,5 +1,6 @@
 import { ExternalLink } from 'lucide-react';
 import {
+  href,
   Link,
   useFetcher,
   useLoaderData,
@@ -146,7 +147,7 @@ export default function DashboardOverview({
           </Table>
           <div className="mt-4 flex justify-center">
             <Button variant="outline" asChild>
-              <Link to="/dashboard/links" prefetch="intent">
+              <Link to={href('/dashboard/overview')} prefetch="intent">
                 View All Links
               </Link>
             </Button>
@@ -199,3 +200,11 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({ formData }) => {
 export function useOverviewLoaderData() {
   return useLoaderData<typeof loader>();
 }
+
+export const meta: Route.MetaFunction = () => [
+  { title: 'Overview - Dashboard' },
+  {
+    name: 'description',
+    content: `Get an overview of your dashboard with stats and top links.`,
+  },
+];

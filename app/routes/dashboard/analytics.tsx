@@ -21,6 +21,7 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
+  type ChartConfig,
 } from '~/components/ui/chart';
 import {
   calculateTrafficSourcePercentages,
@@ -48,15 +49,22 @@ export async function loader({ request }: Route.LoaderArgs) {
 export default function AnalyticsPage() {
   return (
     <>
-      <TrafficSourceBarChart />
-
       <div className="grid gap-4 lg:grid-cols-2">
         <TimeOfDayAnalysis />
         <ClickActivityLast7Days />
       </div>
+
+      <TrafficSourceBarChart />
     </>
   );
 }
+
+const chartConfig = {
+  value: {
+    label: 'Source',
+    color: 'var(--chart-1)',
+  },
+} satisfies ChartConfig;
 
 function TrafficSourceBarChart() {
   const { trafficSourcePercentages } = useLoaderData<typeof loader>();
@@ -76,29 +84,27 @@ function TrafficSourceBarChart() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer
-          config={{
-            value: {
-              label: 'Percentage',
-              color: 'hsl(var(--chart-1))',
-            },
-          }}
-          className="h-[300px]"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={referrerData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="name"
-                tickLine={false}
-                tickMargin={10}
-                axisLine={false}
-              />
-              <YAxis dataKey="value" />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Bar dataKey="value" fill="var(--color-desktop)" radius={8} />
-            </BarChart>
-          </ResponsiveContainer>
+        <ChartContainer config={chartConfig}>
+          <BarChart
+            accessibilityLayer
+            data={referrerData}
+            layout="vertical"
+            barSize={70}
+          >
+            <XAxis type="number" dataKey="value" hide />
+            <YAxis
+              dataKey="name"
+              type="category"
+              tickLine={false}
+              tickMargin={10}
+              axisLine={false}
+            />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent hideLabel />}
+            />
+            <Bar dataKey="value" fill="var(--color-value)" radius={5} />
+          </BarChart>
         </ChartContainer>
       </CardContent>
     </Card>
@@ -119,7 +125,7 @@ function ClickActivityLast7Days() {
           config={{
             clicks: {
               label: 'Clicks',
-              color: 'hsl(var(--chart-1))',
+              color: 'var(--chart-1)',
             },
           }}
           className="h-[300px]"
@@ -147,7 +153,6 @@ function ClickActivityLast7Days() {
 
 function TimeOfDayAnalysis() {
   const { clickActivityByHour } = useLoaderData<typeof loader>();
-  console.log('clickActivityByHour', clickActivityByHour);
 
   return (
     <Card>
@@ -162,7 +167,7 @@ function TimeOfDayAnalysis() {
           config={{
             clicks: {
               label: 'Clicks',
-              color: 'hsl(var(--chart-4))',
+              color: 'var(--chart-4)',
             },
           }}
           className="h-[300px]"
@@ -187,3 +192,8 @@ function TimeOfDayAnalysis() {
     </Card>
   );
 }
+
+export const meta: Route.MetaFunction = () => [
+  { title: 'Analytics - Dashboard' },
+  { name: 'description', content: 'Link analytics and statistics' },
+];
