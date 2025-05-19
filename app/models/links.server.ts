@@ -1,4 +1,15 @@
-import { and, asc, count, desc, eq, gte, lte, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  lte,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { db } from '~/db';
 import { clicks, links, linkSequence } from '~/db/schema.server';
 import { PHISHING_STATUS } from '~/lib/consts';
@@ -49,25 +60,6 @@ export function getOriginalUrl(identifier: string, isShortCode: boolean) {
         : eq(links.customAlias, identifier),
       eq(links.isActive, true),
     ),
-  });
-}
-
-export function getTotalLinksCount(userId: string) {
-  return db
-    .select({ totalLinks: count() })
-    .from(links)
-    .where(eq(links.userId, userId))
-    .then(([result]) => result.totalLinks);
-}
-
-export function getLinks(userId: string, limit = 10, page = 1) {
-  const offset = (page - 1) * limit;
-
-  return db.query.links.findMany({
-    where: eq(links.userId, userId),
-    orderBy: desc(links.createdAt),
-    limit,
-    offset,
   });
 }
 
@@ -169,5 +161,50 @@ export async function getUserStats(userId: string) {
     clicksPrevious24Hours,
     clicksCurrentWeek,
     clicksPreviousWeek,
+  };
+}
+
+interface GetLinksDataOptions {
+  userId: string;
+  limit?: number;
+  page?: number;
+  search?: string | null;
+}
+
+export async function getLinksData(options: GetLinksDataOptions) {
+  const { userId, limit = 10, page = 1, search = null } = options;
+
+  const offset = (page - 1) * limit;
+  const eqToUserId = eq(links.userId, userId);
+  const searchTerm = search ? search.trim().replace(/\s+/g, '-') : null;
+  const searchTermRegex = `%${searchTerm}%`;
+
+  const whereCondition = search
+    ? and(
+        eqToUserId,
+        or(
+          ilike(links.originalUrl, searchTermRegex),
+          ilike(links.customAlias, searchTermRegex),
+        ),
+      )
+    : eqToUserId;
+
+  const result = await Promise.all([
+    db.query.links.findMany({
+      where: whereCondition,
+      orderBy: desc(links.createdAt),
+      limit,
+      offset,
+    }),
+    db
+      .select({ totalLinks: count() })
+      .from(links)
+      .where(whereCondition)
+      .then(([result]) => result.totalLinks),
+  ]);
+
+  return {
+    links: result[0],
+    totalLinks: result[1],
   };
 }

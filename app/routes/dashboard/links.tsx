@@ -2,13 +2,17 @@ import {
   Edit,
   ExternalLink,
   Link2,
+  Loader,
   MoreHorizontal,
   Search,
 } from 'lucide-react';
 import { useState } from 'react';
 import {
+  Form,
   useFetcher,
   useLoaderData,
+  useNavigation,
+  useSearchParams,
   type ShouldRevalidateFunction,
 } from 'react-router';
 import { authSession } from '~/auth/session.server';
@@ -43,8 +47,7 @@ import { ACTION_NAME } from '~/lib/consts';
 import { getShortUrl } from '~/lib/utils';
 import {
   deleteLinkById,
-  getLinks,
-  getTotalLinksCount,
+  getLinksData,
   updateLinkActiveStatus,
 } from '~/models/links.server';
 import type { Route } from './+types/links';
@@ -57,11 +60,14 @@ export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const page = Number(url.searchParams.get('p')) || 1;
   const itemsPerPage = Number(url.searchParams.get('pp')) || 7;
+  const search = url.searchParams.get('s');
 
-  const [totalLinks, links] = await Promise.all([
-    getTotalLinksCount(user.id),
-    getLinks(user.id, itemsPerPage, page),
-  ]);
+  const { links, totalLinks } = await getLinksData({
+    search,
+    userId: user.id,
+    page,
+    limit: itemsPerPage,
+  });
 
   return { user, totalLinks, links };
 }
@@ -100,19 +106,7 @@ export default function DashboardLinks({ loaderData }: Route.ComponentProps) {
       <CardHeader>
         <CardTitle>My Links</CardTitle>
         <CardDescription>Manage all your shortened links</CardDescription>
-        <div className="flex w-full max-w-sm items-center space-x-2">
-          <Input
-            type="search"
-            placeholder="Search links..."
-            // value={searchTerm}
-            // onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-9"
-          />
-          <Button type="submit" size="sm" className="px-3">
-            <Search className="h-4 w-4" />
-            <span className="sr-only">Search</span>
-          </Button>
-        </div>
+        <SearchBar />
       </CardHeader>
       <CardContent>
         <Table>
@@ -235,6 +229,46 @@ function ActiveStatusSwitch({
 
 interface ActionButtonProps {
   linkId: string;
+}
+
+function SearchBar() {
+  const [searchParams] = useSearchParams();
+  const search = searchParams.get('s') ?? '';
+  const navigation = useNavigation();
+  const isSearching =
+    navigation.state === 'loading' &&
+    navigation.formData?.get('s') !== undefined;
+
+  return (
+    <Form
+      method="GET"
+      className="flex w-full max-w-sm items-center space-x-2"
+      preventScrollReset
+    >
+      {Array.from(searchParams.entries()).map(([key, value]) => {
+        if (key === 's' || key === 'p') return null;
+        return <input key={key} type="hidden" name={key} value={value} />;
+      })}
+
+      <Input
+        type="text"
+        aria-role="search"
+        enterKeyHint="search"
+        placeholder="Search links..."
+        name="s"
+        className="h-9"
+        defaultValue={search}
+      />
+      <Button type="submit" size="sm" className="px-3">
+        {isSearching ? (
+          <Loader className="h-4 w-4 animate-spin" />
+        ) : (
+          <Search className="h-4 w-4" />
+        )}
+        <span className="sr-only">{isSearching ? 'Searching' : 'Search'}</span>
+      </Button>
+    </Form>
+  );
 }
 
 function ActionButton({ linkId }: ActionButtonProps) {
