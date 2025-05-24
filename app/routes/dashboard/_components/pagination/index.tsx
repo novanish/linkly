@@ -24,6 +24,8 @@ export function PerPage() {
   const indexOfLastItem = Math.min(page * itemsPerPage, totalLinks);
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
 
+  if (totalLinks <= itemsPerPage) return null;
+
   return (
     <div className="flex items-center space-x-2">
       <p className="text-muted-foreground text-sm">
@@ -64,6 +66,8 @@ export function LinksPagination() {
     itemsPerPage,
     page,
   );
+
+  if (totalLinks <= itemsPerPage) return null;
 
   return (
     <Pagination>

@@ -128,9 +128,8 @@ function ClickActivityLast7Days() {
               color: 'var(--chart-1)',
             },
           }}
-          className="h-[300px]"
         >
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer>
             <LineChart data={clickActivity}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
@@ -170,9 +169,8 @@ function TimeOfDayAnalysis() {
               color: 'var(--chart-4)',
             },
           }}
-          className="h-[300px]"
         >
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer>
             <LineChart data={clickActivityByHour}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="hour" />

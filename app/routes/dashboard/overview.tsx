@@ -27,7 +27,7 @@ import {
   TableRow,
 } from '~/components/ui/table';
 import { ACTION_NAME } from '~/lib/consts';
-import { getShortUrl } from '~/lib/utils';
+import { formatNumber, getShortUrl } from '~/lib/utils';
 import {
   getTopLinks,
   getUserStats,
@@ -114,7 +114,7 @@ export default function DashboardOverview({
                       {new Date(link.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
-                      {link.clicksCount}
+                      {formatNumber(link.clicksCount || 0)}
                     </TableCell>
                     <TableCell className="text-center">
                       <ActiveStatusSwitch
@@ -147,7 +147,7 @@ export default function DashboardOverview({
           </Table>
           <div className="mt-4 flex justify-center">
             <Button variant="outline" asChild>
-              <Link to={href('/dashboard/overview')} prefetch="intent">
+              <Link to={href('/dashboard/links')} prefetch="intent">
                 View All Links
               </Link>
             </Button>

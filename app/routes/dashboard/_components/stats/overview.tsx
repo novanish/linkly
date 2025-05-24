@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from '~/components/ui/card';
 import { useOverviewLoaderData } from '../../overview';
+import { formatNumber } from '~/lib/utils';
 
 function calculateTrend(current: number, previous: number) {
   if (previous === 0) {
@@ -42,7 +43,7 @@ export function OverviewStats() {
         <CardHeader className="relative">
           <CardDescription>New Links This Month</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {stats.newLinksThisMonth}
+            {formatNumber(stats.newLinksThisMonth)}
           </CardTitle>
           <div className="absolute top-4 right-4">
             <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
@@ -72,7 +73,7 @@ export function OverviewStats() {
         <CardHeader className="relative">
           <CardDescription>Clicks This Month</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {stats.clicksThisMonth}
+            {formatNumber(stats.clicksThisMonth)}
           </CardTitle>
           <div className="absolute top-4 right-4">
             <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
@@ -102,7 +103,7 @@ export function OverviewStats() {
         <CardHeader className="relative">
           <CardDescription>Weekly Clicks</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {stats.clicksCurrentWeek}
+            {formatNumber(stats.clicksCurrentWeek)}
           </CardTitle>
           <div className="absolute top-4 right-4">
             <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
@@ -133,7 +134,7 @@ export function OverviewStats() {
         <CardHeader className="relative">
           <CardDescription>Recent Clicks (Last 24 Hours)</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {stats.clicksLast24Hours}
+            {formatNumber(stats.clicksLast24Hours)}
           </CardTitle>
           <div className="absolute top-4 right-4">
             <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
