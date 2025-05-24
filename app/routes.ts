@@ -22,14 +22,17 @@ export default [
     ]),
   ),
 
-  layout(
-    'routes/dashboard/layout.tsx',
-    prefix('dashboard', [
-      route('overview', 'routes/dashboard/overview.tsx'),
-      route('links', 'routes/dashboard/links.tsx'),
-      route('analytics', 'routes/dashboard/analytics.tsx'),
-    ]),
-  ),
+  layout('routes/authenticated-layout.tsx', [
+    ...prefix('user', [route('profile', 'routes/user/profile.tsx')]),
+    layout(
+      'routes/dashboard/layout.tsx',
+      prefix('dashboard', [
+        route('overview', 'routes/dashboard/overview.tsx'),
+        route('links', 'routes/dashboard/links.tsx'),
+        route('analytics', 'routes/dashboard/analytics.tsx'),
+      ]),
+    ),
+  ]),
 
   route('/s?/:shortCode', 'routes/redirect/index.tsx'),
 
