@@ -8,8 +8,8 @@ import {
 } from '~/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '~/components/ui/avatar';
 import { Button } from '~/components/ui/button';
-import { ChevronDown, LayoutDashboard, LogOut } from 'lucide-react';
-import { Form, Link } from 'react-router';
+import { ChevronDown, LayoutDashboard, LogOut, User } from 'lucide-react';
+import { Form, href, Link } from 'react-router';
 
 interface Props {
   name?: string | null;
@@ -50,7 +50,18 @@ export function UserButton({ email, avatarUrl, name }: Props) {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link
-            to="/dashboard/overview"
+            to={href('/user/profile')}
+            className="flex w-full items-center gap-2"
+          >
+            <User />
+            Profile
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link
+            prefetch="intent"
+            to={href('/dashboard/overview')}
             className="flex w-full items-center gap-2"
           >
             <LayoutDashboard />
@@ -59,7 +70,7 @@ export function UserButton({ email, avatarUrl, name }: Props) {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Form method="post" action="/auth/logout">
+          <Form method="post" action={href('/auth/logout')}>
             <button
               type="submit"
               className="flex w-full items-center gap-2 text-red-500"
