@@ -32,6 +32,7 @@ import {
   type UpdateProfileSchema,
 } from '~/validations/user.schema';
 import type { Route } from './+types/profile';
+import { uploadAvatarImage } from '~/lib/imagekit.server';
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await authSession.require(request);
@@ -39,7 +40,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   return {
     name: user.name,
     email: user.email,
-    profileImage: user.avatarUrl,
+    avatarUrl: user.avatarUrl,
   };
 }
 
@@ -55,8 +56,15 @@ export async function action({ request }: Route.ActionArgs) {
 
   const userId = await authSession.getUserId(request);
   if (!userId) throw redirect(href('/auth/login'));
+  let avatarUrl: string | undefined = undefined;
+  if (submission.value.avatarImageFile) {
+    const result = await uploadAvatarImage(submission.value.avatarImageFile);
+    if (result.url) {
+      avatarUrl = result.url;
+    }
+  }
 
-  await updateUserById(userId, submission.value);
+  await updateUserById(userId, { name: submission.value.name, avatarUrl });
 
   return null;
 }
@@ -84,13 +92,13 @@ export default function ProfilePage() {
 
 export function ProfileForm() {
   const navigation = useNavigation();
-  const { email, name } = useLoaderData<typeof loader>();
+  const { email, name, avatarUrl } = useLoaderData<typeof loader>();
   const lastResult = useActionData<typeof action>();
   const [form, fields] = useForm<UpdateProfileSchema>({
     lastResult,
 
     defaultValue: {
-      name: name || 'hello',
+      name: name || '',
     },
 
     onSubmit(event) {
@@ -121,33 +129,38 @@ export function ProfileForm() {
           onSubmit={form.onSubmit}
           id={form.id}
           className="space-y-8"
+          encType="multipart/form-data"
         >
           <div className="flex flex-col gap-8 md:flex-row">
             <div className="flex flex-col items-center space-y-4">
               <div className="relative">
                 <div className="border-background h-32 w-32 overflow-hidden rounded-full border-4 shadow-xl">
-                  {/* <img
-                      src={previewImage || user.profileImage}
-                      alt="Profile"
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={`Profile picture of ${name}`}
                       width={128}
                       height={128}
                       className="h-full w-full object-cover"
-                    /> */}
+                    />
+                  ) : null}
                 </div>
-                <button
+                <Button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="absolute right-0 bottom-0 rounded-full bg-rose-500 p-2 text-white shadow-sm hover:bg-rose-600 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:outline-none"
                 >
                   <Camera className="h-4 w-4" />
                   <span className="sr-only">Change profile picture</span>
-                </button>
+                </Button>
               </div>
               <input
                 ref={fileInputRef}
                 type="file"
+                id="avatarImageFile"
                 accept="image/*"
-                className="hidden"
+                className="sr-only"
+                name={fields.avatarImageFile.name}
               />
               <p className="text-muted-foreground text-sm">
                 Click the camera icon to upload a new photo
