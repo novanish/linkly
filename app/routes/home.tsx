@@ -13,11 +13,13 @@ import {
   Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { href, Link } from 'react-router';
+import { href, Link, useLocation } from 'react-router';
 import { Footer } from '~/components/footer';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
-import { APP_NAME } from '~/lib/consts';
+import { APP_DESCRIPTION, APP_NAME } from '~/lib/consts';
+import { cn } from '~/lib/utils';
+import type { Route } from './+types/home';
 
 export default function HomePage() {
   return (
@@ -34,9 +36,15 @@ export default function HomePage() {
   );
 }
 
+export const meta: Route.MetaDescriptors = [
+  { title: APP_NAME },
+  { description: APP_DESCRIPTION },
+];
+
 function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const { hash } = useLocation();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -66,16 +74,28 @@ function Header() {
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
-          {['Features', 'How it Works', 'About'].map((item) => (
-            <Link
-              key={item}
-              to={`#${item.toLowerCase().replaceAll(' ', '-')}`}
-              className="text-muted-foreground hover:text-foreground group relative text-sm font-medium transition-colors"
-            >
-              {item}
-              <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-rose-500 transition-all group-hover:w-full" />
-            </Link>
-          ))}
+          {['Features', 'How it Works', 'About'].map((item) => {
+            const currentHash = `#${item.toLowerCase().replaceAll(' ', '-')}`;
+            const isActive = currentHash === hash;
+
+            return (
+              <Link
+                key={item}
+                to={currentHash}
+                className={
+                  'text-muted-foreground hover:text-foreground group relative text-sm font-medium transition-colors'
+                }
+              >
+                {item}
+                <span
+                  className={cn(
+                    'absolute -bottom-1 left-0 h-0.5 w-0 bg-rose-500 transition-all group-hover:w-full',
+                    isActive ? 'w-full' : undefined,
+                  )}
+                />
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
@@ -144,7 +164,6 @@ function Hero() {
             Connecting millions, one link at a time
           </div>
 
-          {/* Main Heading */}
           <div className="space-y-6">
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
               <span className="block">Shorten Link.</span>
