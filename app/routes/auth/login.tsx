@@ -1,7 +1,9 @@
 import { Loader2, Mail } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { Form, useNavigation } from 'react-router';
+import React, { useEffect, useState } from 'react';
+import { Form, useNavigation, useSubmit } from 'react-router';
 import { getClientIPAddress } from 'remix-utils/get-client-ip-address';
+import { toast } from 'sonner';
+import { z } from 'zod/v4-mini';
 import { authSession } from '~/auth/session.server';
 import { Button } from '~/components/ui/button';
 import {
@@ -59,9 +61,15 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   const formData = await request.formData();
-  const email = formData.get('email')?.toString() || '';
+  const validationResult = z.email().safeParse(formData.get('email'));
+  if (validationResult.error) {
+    const errorMessage =
+      validationResult.error.issues[0]?.message || 'Invalid email address';
+    return { error: errorMessage };
+  }
 
   try {
+    const email = validationResult.data;
     const magicLink = await generateMagicLink(email);
     await sendMagicLinkEmail({ email, url: magicLink });
 
@@ -74,6 +82,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 export default function LoginPage({ actionData }: Route.ComponentProps) {
   const [isMagicLinkSent, setIsMagicLinkSent] = useState(false);
+  const submit = useSubmit();
   useRevalidateOnInterval({
     enabled: isMagicLinkSent,
     interval: 2000,
@@ -90,14 +99,30 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
     }
   }, [actionData?.emailSent]);
 
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const email = e.currentTarget.email.value;
+    const { success } = z.email().safeParse(email);
+    if (!success) {
+      toast.error(
+        'Please enter a valid email address (e.g., user@example.com)',
+      );
+      return;
+    }
+
+    submit(e.currentTarget);
+  }
+
   return (
     <Card className="w-full border-rose-100 bg-white/90 backdrop-blur-xs">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-        <CardDescription>
-          Sign in to your account to manage your shortened links
-        </CardDescription>
-      </CardHeader>
+      {isMagicLinkSent ? null : (
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">Welcome</CardTitle>
+          <CardDescription>
+            Sign in or create an account to manage your shortened links
+          </CardDescription>
+        </CardHeader>
+      )}
 
       <CardContent className="space-y-4">
         {isMagicLinkSent ? (
@@ -123,7 +148,13 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
           </div>
         ) : (
           <>
-            <Form method="POST" className="space-y-4">
+            <Form method="POST" className="space-y-4" onSubmit={handleSubmit}>
+              {actionData?.error ? (
+                <div className="rounded-md bg-red-100 p-3 text-sm text-red-700">
+                  {actionData.error}
+                </div>
+              ) : null}
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
