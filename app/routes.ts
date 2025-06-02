@@ -23,7 +23,11 @@ export default [
   ),
 
   layout('routes/authenticated-layout.tsx', [
-    ...prefix('user', [route('profile', 'routes/user/profile.tsx')]),
+    ...prefix('user', [
+      route('profile', 'routes/user/profile.tsx'),
+      route('sessions', 'routes/user/sessions.tsx'),
+    ]),
+
     layout(
       'routes/dashboard/layout.tsx',
       prefix('dashboard', [
