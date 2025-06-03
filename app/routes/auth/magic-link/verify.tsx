@@ -1,5 +1,5 @@
 import { AlertCircle } from 'lucide-react';
-import { Link, redirect, type LoaderFunctionArgs } from 'react-router';
+import { href, Link, redirect, type LoaderFunctionArgs } from 'react-router';
 import { authSession } from '~/auth/session.server';
 import { Button } from '~/components/ui/button';
 import {
@@ -17,9 +17,7 @@ import { verifyMagicLinkToken } from '~/lib/magic-link.server';
 export async function loader({ request }: LoaderFunctionArgs) {
   const { email, isValid } = await verifyMagicLinkToken(request);
   if (!isValid || !email) {
-    return new Response(JSON.stringify({ error: 'Invalid token' }), {
-      status: 400,
-    });
+    return Response.json({ error: 'Invalid token' }, { status: 400 });
   }
 
   const userId = await db.transaction(async (tx) => {
@@ -48,9 +46,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
     return user.id;
   });
 
-  return redirect('/dashboard/overview', {
+  return redirect(href('/dashboard/overview'), {
     headers: {
-      'Set-Cookie': await authSession.create({ userId }),
+      'Set-Cookie': await authSession.create({ request, userId }),
     },
   });
 }
@@ -82,7 +80,7 @@ export default function MagicLinkErrorPage() {
 
       <CardFooter className="flex flex-col space-y-4">
         <Button className="w-full bg-rose-500 hover:bg-rose-600" asChild>
-          <Link to="/auth/login">Return to Login</Link>
+          <Link to={href('/auth/login')}>Return to Login</Link>
         </Button>
       </CardFooter>
     </Card>

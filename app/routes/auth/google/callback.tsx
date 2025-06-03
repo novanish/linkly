@@ -1,5 +1,5 @@
 import { decodeIdToken, type OAuth2Tokens } from 'arctic';
-import { redirect } from 'react-router';
+import { href, redirect } from 'react-router';
 import {
   codeVerifierCookie,
   google,
@@ -75,9 +75,9 @@ export async function loader({ request }: { request: Request }) {
     return user.id;
   });
 
-  return redirect('/', {
+  return redirect(href('/dashboard/overview'), {
     headers: {
-      'Set-Cookie': await authSession.create({ userId }),
+      'Set-Cookie': await authSession.create({ request, userId }),
     },
   });
 }
