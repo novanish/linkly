@@ -4,6 +4,7 @@ import {
   redirect,
   type CookieOptions,
 } from 'react-router';
+import { getClientIPAddress } from 'remix-utils/get-client-ip-address';
 import { z } from 'zod';
 import { redisClient } from '~/db/redis.server';
 import { env } from '~/env/server';
@@ -15,6 +16,8 @@ const SessionDataSchema = z.object({
   userId: z.string(),
   createdAt: z.string(),
   extra: z.record(z.unknown()).optional(),
+  userAgent: z.string().optional().nullable(),
+  ip: z.string().optional().nullable(),
 });
 
 export type SessionData = z.infer<typeof SessionDataSchema>;
@@ -136,19 +139,66 @@ const { commitSession, getSession, destroySession } = createRedisSessionStorage(
 );
 
 async function createUserSession({
+  request,
   userId,
   extraData,
 }: {
   userId: string;
+  request: Request;
   extraData?: Record<string, unknown>;
 }) {
   const session = await getSession();
   session.set('userId', userId);
+  session.set('userAgent', request.headers.get('User-Agent'));
+  session.set('ip', getClientIPAddress(request));
   if (extraData) {
     session.set('extra', extraData);
   }
 
   return commitSession(session);
+}
+
+async function getAllSessionsForLoggedInUser(request: Request) {
+  const session = await getUserSession(request);
+  const userId = session.get('userId');
+  if (!userId) return [];
+
+  const userSessionsKey = `user_sessions:${userId}`;
+  const sessionIds = await redisClient.smembers(userSessionsKey);
+
+  if (sessionIds.length === 0) return [];
+
+  const pipeline = redisClient.pipeline();
+  for (const sessionId of sessionIds) {
+    pipeline.get(`session:${sessionId}`);
+  }
+
+  const results = await pipeline.exec();
+
+  const sessions = [];
+  for (let i = 0; i < sessionIds.length; i++) {
+    const sessionId = sessionIds[i];
+    const result = results?.[i];
+
+    if (result && result[1]) {
+      try {
+        const sessionData = JSON.parse(result[1] as string) as SessionData;
+        sessions.push({
+          id: sessionId,
+          ...sessionData,
+          isCurrentSession: session.id === sessionId,
+        });
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  sessions.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+
+  return sessions;
 }
 
 async function getUserSession(request: Request) {
@@ -216,4 +266,5 @@ export const authSession = {
   destroy: destroyUserSession,
   destroyAllForUser: destroyAllSessionsForUser,
   redirectIfLoggedIn,
+  getAllSessionsForLoggedInUser,
 };

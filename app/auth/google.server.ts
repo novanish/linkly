@@ -1,5 +1,5 @@
 import { Google } from 'arctic';
-import { createCookie, type CookieOptions } from 'react-router';
+import { createCookie, href, type CookieOptions } from 'react-router';
 import { env } from '~/env/server';
 import { sec } from '~/lib/utils';
 
@@ -20,7 +20,7 @@ export const codeVerifierCookie = createCookie(
   cookieOptions,
 );
 
-const redirectUri = new URL('/api/auth/callback/google', env.ORIGIN);
+const redirectUri = new URL(href('/auth/google/callback'), env.ORIGIN);
 
 export const google = new Google(
   env.GOOGLE_CLIENT_ID,
