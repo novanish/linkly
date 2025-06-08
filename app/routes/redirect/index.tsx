@@ -28,13 +28,11 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const isShortCodeRedirect = url.pathname.startsWith('/s/');
   const link = await getOriginalUrl(params.shortCode, isShortCodeRedirect);
-
   if (!link) {
     throw new Response('Not Found', { status: 404 });
   }
 
-  void recordClickAnalytics(request, link.id);
-
+  if (link.trackClicks) void recordClickAnalytics(request, link.id);
   if (link.phishingStatus === PHISHING_STATUS.SAFE)
     return redirect(link.originalUrl);
 
