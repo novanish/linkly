@@ -27,7 +27,7 @@ class FixedWindowRateLimiter implements RateLimiter {
       return {
         isAllowed: true,
         remainingRequests: options.limit,
-        retryAfter: 10,
+        retryAfter: options.duration,
       };
     }
 
