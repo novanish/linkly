@@ -23,6 +23,8 @@ export default [
   ),
 
   layout('routes/authenticated-layout.tsx', [
+    ...prefix('link', [route('create', 'routes/link/create.tsx')]),
+
     ...prefix('user', [
       route('profile', 'routes/user/profile.tsx'),
       route('sessions', 'routes/user/sessions.tsx'),
