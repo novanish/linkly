@@ -25,7 +25,18 @@ import { Input } from '~/components/ui/input';
 import { Switch } from '~/components/ui/switch';
 import { createLinkSchema } from '~/validations/link.schema';
 
-export function SingleLinkCreator() {
+interface Props {
+  defaultValues?: {
+    isActive?: string;
+    trackClicks?: string;
+    originalUrl?: string;
+    customAlias?: string | null;
+  };
+
+  isEdit?: boolean;
+}
+
+export function SingleLinkCreator({ defaultValues = {}, isEdit }: Props) {
   const actionData = useActionData();
   const [form, fields] = useForm({
     id: 'create-single-link-form',
@@ -37,6 +48,7 @@ export function SingleLinkCreator() {
     defaultValue: {
       isActive: 'on',
       trackClicks: 'on',
+      ...defaultValues,
     },
   });
 
@@ -46,9 +58,11 @@ export function SingleLinkCreator() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create Single Link</CardTitle>
+        <CardTitle>{isEdit ? 'Update' : 'Create'} Single Link</CardTitle>
         <CardDescription>
-          Generate a single shortened link with custom aliases.
+          {isEdit
+            ? 'Update a single shortened link with custom aliases.'
+            : 'Generate a single shortened link with custom aliases.'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -107,7 +121,13 @@ export function SingleLinkCreator() {
                 type="submit"
                 className="ml-auto block bg-rose-500 hover:bg-rose-600"
               >
-                {isCreating ? 'Creating Link...' : 'Create Link'}
+                {isCreating
+                  ? isEdit
+                    ? 'Updating Link...'
+                    : 'Creating Link...'
+                  : isEdit
+                    ? 'Update Link'
+                    : 'Create Link'}
               </Button>
             </Form>
           </FormProvider>
