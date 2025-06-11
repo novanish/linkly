@@ -91,6 +91,11 @@
   * {
     @apply border-border;
   }
+
+  :root {
+    @apply scroll-smooth;
+  }
+
   body {
     @apply bg-background text-foreground;
   }
