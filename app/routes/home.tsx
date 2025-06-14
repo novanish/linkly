@@ -13,7 +13,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { href, Link, useLocation } from 'react-router';
+import { Form, href, Link, useLocation } from 'react-router';
 import { Footer } from '~/components/footer';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
@@ -178,10 +178,17 @@ function Hero() {
           </div>
 
           <div className="mx-auto max-w-2xl space-y-6">
-            <div className="relative">
+            <Form
+              action={href('/link/create')}
+              method="POST"
+              className="relative"
+            >
               <div className="bg-background flex flex-col gap-3 rounded-xl border p-2 shadow-lg sm:flex-row">
+                <input type="hidden" name="isActive" value="on" />
+                <input type="hidden" name="trackClicks" value="on" />
                 <Input
                   type="url"
+                  name="originalUrl"
                   placeholder="Paste your long URL here..."
                   className="placeholder:text-muted-foreground/60 flex-1 border-0 bg-transparent text-base focus-visible:ring-0"
                 />
@@ -190,17 +197,7 @@ function Hero() {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col justify-center gap-4 pt-4 sm:flex-row">
-            <Button
-              size="lg"
-              className="bg-rose-500 shadow-lg transition-all hover:bg-rose-600 hover:shadow-xl"
-            >
-              Start Shortening
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+            </Form>
           </div>
         </div>
       </div>
@@ -349,9 +346,12 @@ function HowItWorks() {
             Ready to get started? It only takes a few seconds to create your
             first short link.
           </p>
-          <button className="inline-flex items-center gap-2 rounded-lg bg-rose-500 px-6 py-3 font-medium text-white transition-colors hover:bg-rose-600">
-            Try It Now
-          </button>
+          <Button
+            className="inline-flex items-center gap-2 rounded-lg bg-rose-500 px-6 py-3 font-medium text-white transition-colors hover:bg-rose-600"
+            asChild
+          >
+            <Link to={href('/link/create')}>Try It Now</Link>
+          </Button>
         </div>
       </div>
     </section>
@@ -384,9 +384,12 @@ function CallToAction() {
               <Button
                 size="lg"
                 className="bg-rose-500 shadow-lg transition-all hover:bg-rose-600 hover:shadow-xl"
+                asChild
               >
-                Get Started
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <Link to={href('/link/create')}>
+                  Get Started
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
               </Button>
             </div>
           </div>
