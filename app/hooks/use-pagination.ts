@@ -1,5 +1,5 @@
 import { parseAsFloat, useQueryStates, type UrlKeys } from 'nuqs';
-import { createSerializer } from 'nuqs/server';
+import { createSerializer, createLoader } from 'nuqs/server';
 import { useLocation } from 'react-router';
 
 const paginationParams = {
@@ -30,3 +30,7 @@ export function usePagination() {
     serialize,
   };
 }
+
+export const loadPaginationSearchParams = createLoader(paginationParams, {
+  urlKeys: paginationUrlKeys,
+});
