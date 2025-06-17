@@ -1,30 +1,36 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import ms from 'ms';
+import { redirect } from 'react-router';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function sec(value: Parameters<typeof ms>[0]) {
+export function sec(value: ms.StringValue) {
   return Math.round(ms(value) / 1000);
+}
+
+export function clamp({
+  min,
+  value,
+  max,
+}: Record<'min' | 'value' | 'max', number>) {
+  return Math.max(min, Math.min(max, value));
 }
 
 export function toBase62(num: number): string {
   const chars =
     '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
   if (num === 0) return chars[0];
+
   let result = '';
   while (num > 0) {
     result = chars[num % 62] + result;
     num = Math.floor(num / 62);
   }
-  return result;
-}
 
-interface GetShortUrlArgs {
-  shortCode: string;
-  customAlias?: string | null;
+  return result;
 }
 
 export function getShortUrl({ shortCode, customAlias }: GetShortUrlArgs) {
@@ -35,71 +41,60 @@ export function getShortUrl({ shortCode, customAlias }: GetShortUrlArgs) {
   return `http://localhost:3000/s/${shortCode}`;
 }
 
-export function getCurrentWeekStartAndEnd() {
-  const curr = new Date();
-  const first = curr.getDate() - curr.getDay();
-  const last = first + 6;
-
-  const firstDate = new Date(curr);
-  firstDate.setDate(first);
-
-  const lastDate = new Date(curr);
-  lastDate.setDate(last);
-
-  return {
-    start: firstDate,
-    end: lastDate,
-  };
-}
-
-export function getLastWeekStartAndEnd() {
+export function getStartAndEndDates() {
   const now = new Date();
-  const currentDay = now.getDay();
+  const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endOfThisMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-  const start = new Date(now);
-  start.setDate(now.getDate() - currentDay - 7);
-  start.setHours(0, 0, 0, 0);
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
 
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
-  end.setHours(23, 59, 59, 999);
+  const startOfCurrentWeek = new Date(now);
+  startOfCurrentWeek.setDate(now.getDate() - now.getDay());
+  startOfCurrentWeek.setHours(0, 0, 0, 0);
+
+  const startOfPreviousWeek = new Date(startOfCurrentWeek);
+  startOfPreviousWeek.setDate(startOfCurrentWeek.getDate() - 7);
+
+  const endOfPreviousWeek = new Date(startOfCurrentWeek);
+  endOfPreviousWeek.setDate(startOfCurrentWeek.getDate() - 1);
+  endOfPreviousWeek.setHours(23, 59, 59, 999);
 
   return {
-    start,
-    end,
+    now,
+    startOfThisMonth,
+    endOfThisMonth,
+    startOfLastMonth,
+    endOfLastMonth,
+    twentyFourHoursAgo,
+    fortyEightHoursAgo,
+    startOfCurrentWeek,
+    startOfPreviousWeek,
+    endOfPreviousWeek,
   };
 }
 
-export function getCurrentMonthStartAndEnd() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+const formatter = new Intl.NumberFormat('en-US', {
+  notation: 'compact',
+  compactDisplay: 'short',
+});
 
-  return {
-    start,
-    end,
-  };
+export function formatNumber(num: number) {
+  return formatter.format(num);
 }
 
-export function getLastMonthStartAndEnd() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const end = new Date(now.getFullYear(), now.getMonth(), 0);
+const isSafeUrl = (url: string) =>
+  url.startsWith('/') && !url.startsWith('//') && !url.startsWith('/\\');
 
-  return {
-    start,
-    end,
-  };
+export function safeRedirect(url: string, init?: number | ResponseInit) {
+  const defaultRedirect = '/';
+  const safeRedirectUrl = isSafeUrl(url) ? url : defaultRedirect;
+  return redirect(safeRedirectUrl, init);
 }
 
-export function getPercentageChange(
-  oldValue: number,
-  newValue: number,
-): number | null {
-  if (oldValue === 0 && newValue === 0) return 0;
-
-  if (oldValue === 0) return null;
-
-  const change = (Math.abs(newValue - oldValue) / oldValue) * 100;
-  return parseFloat(change.toFixed(2));
+interface GetShortUrlArgs {
+  shortCode: string;
+  customAlias?: string | null;
 }
