@@ -1,6 +1,6 @@
 import { Plus } from 'lucide-react';
 import { NuqsAdapter } from 'nuqs/adapters/react-router/v7';
-import { Outlet } from 'react-router';
+import { href, Link, Outlet } from 'react-router';
 import { Button } from '~/components/ui/button';
 import { Dialog, DialogTrigger } from '~/components/ui/dialog';
 import { DashboardSubNav } from './_components/nav/sub-nav';
@@ -17,9 +17,11 @@ export default function DashboardLayout() {
         </div>
         <Dialog>
           <DialogTrigger asChild>
-            <Button className="bg-rose-500 hover:bg-rose-600">
-              <Plus className="mr-2 h-4 w-4" />
-              Create New Link
+            <Button className="bg-rose-500 hover:bg-rose-600" asChild>
+              <Link to={href('/link/create')}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create New Link
+              </Link>
             </Button>
           </DialogTrigger>
         </Dialog>
