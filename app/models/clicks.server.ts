@@ -1,33 +1,50 @@
+import { createId } from '@paralleldrive/cuid2';
 import { and, eq, gte, sql } from 'drizzle-orm';
 import ms from 'ms';
 import { getClientIPAddress } from 'remix-utils/get-client-ip-address';
+import { UAParser } from 'ua-parser-js';
 import { db } from '~/db';
 import { clicks, links, TRAFFIC_SOURCE } from '~/db/schema.server';
+import { DEVICE_TYPE } from '~/lib/consts';
+import { retry, type RetryOptions } from '~/lib/utils';
 
 export async function recordClickAnalytics(request: Request, linkId: string) {
   try {
-    const trafficSource = determineTrafficSource(request);
     const headers = request.headers;
-    const ipAddress = getClientIPAddress(request) || 'unknown';
-    const userAgent = headers.get('user-agent') || 'unknown';
     const referrer = headers.get('referer') || null;
+    const ua = headers.get('user-agent') || 'unknown';
 
-    await db.insert(clicks).values({
+    const ipAddress = getClientIPAddress(request) || 'unknown';
+    const trafficSource = determineTrafficSource(request);
+    const parsedUA = UAParser(ua);
+
+    const data = {
+      id: createId(),
       linkId,
       ipAddress,
-      userAgent,
       referrer,
       trafficSource,
+      deviceType: getDeviceType(parsedUA),
       clickedAt: new Date(),
-    });
+    } satisfies typeof clicks.$inferInsert;
 
-    await db
-      .update(links)
-      .set({
-        clicksCount: sql`${links.clicksCount} + 1`,
-        updatedAt: new Date(),
-      })
-      .where(eq(links.id, linkId));
+    const insertClickAndIncrementCount = async () => {
+      await db.transaction(async (tx) => {
+        await tx.insert(clicks).values(data);
+
+        await tx
+          .update(links)
+          .set({ clicksCount: sql`${links.clicksCount} + 1` })
+          .where(eq(links.id, linkId));
+      });
+    };
+
+    const retryOptions: RetryOptions = {
+      attempts: 4,
+      retryAfter: ms('3 seconds'),
+    };
+
+    retry(insertClickAndIncrementCount, retryOptions);
   } catch (error) {
     console.error('Error recording click analytics:', error);
   }
@@ -165,6 +182,8 @@ function determineTrafficSource(request: Request) {
     'linkedin.com',
     't.co',
     'fb.me',
+    'reddit.com',
+    'x.com',
   ];
   if (socialDomains.some((domain) => referer.includes(domain))) {
     return TRAFFIC_SOURCE.SOCIAL;
@@ -181,4 +200,38 @@ function determineTrafficSource(request: Request) {
   }
 
   return TRAFFIC_SOURCE.DIRECT;
+}
+
+function getDeviceType({ device, os }: UAParser.IResult) {
+  switch (device.type) {
+    case 'mobile':
+      return DEVICE_TYPE.MOBILE;
+    case 'tablet':
+      return DEVICE_TYPE.TABLET;
+  }
+
+  if (device.type == null && os.name && isDesktopOS(os.name)) {
+    return DEVICE_TYPE.DESKTOP;
+  }
+
+  return DEVICE_TYPE.UNKNOWN;
+}
+
+function isDesktopOS(osName: string) {
+  const desktopOSNames = [
+    'Windows',
+    'Mac OS',
+    'macOS',
+    'Linux',
+    'Ubuntu',
+    'Debian',
+    'Fedora',
+    'CentOS',
+    'Red Hat',
+    'Chrome OS',
+  ];
+
+  return desktopOSNames.some((desktop) =>
+    osName.toLowerCase().includes(desktop.toLowerCase()),
+  );
 }
