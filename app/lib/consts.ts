@@ -12,3 +12,10 @@ export const PHISHING_STATUS = {
 } as const;
 
 export const ACTION_NAME = '__a';
+
+export const DEVICE_TYPE = {
+  DESKTOP: 'desktop',
+  MOBILE: 'mobile',
+  TABLET: 'tablet',
+  UNKNOWN: 'unknown',
+} as const;

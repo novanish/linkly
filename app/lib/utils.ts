@@ -94,7 +94,29 @@ export function safeRedirect(url: string, init?: number | ResponseInit) {
   return redirect(safeRedirectUrl, init);
 }
 
+export function wait(delay: number) {
+  return new Promise((resolve) => setTimeout(resolve, delay));
+}
+
+export async function retry(cb: () => Promise<void>, options: RetryOptions) {
+  const { attempts = 0 } = options;
+
+  try {
+    await cb();
+  } catch (error) {
+    if (attempts <= 0) throw error;
+    if (options.retryAfter) await wait(options.retryAfter);
+
+    await retry(cb, { ...options, attempts: attempts - 1 });
+  }
+}
+
 interface GetShortUrlArgs {
   shortCode: string;
   customAlias?: string | null;
+}
+
+export interface RetryOptions {
+  attempts?: number;
+  retryAfter?: number;
 }
