@@ -6,7 +6,14 @@ import {
 } from '@conform-to/react';
 import { parseWithZod } from '@conform-to/zod/v4';
 import { Power } from 'lucide-react';
-import { Form, useActionData, useNavigation } from 'react-router';
+import {
+  Form,
+  href,
+  useActionData,
+  useNavigate,
+  useNavigation,
+  useSubmit,
+} from 'react-router';
 import { Button } from '~/components/ui/button';
 import {
   Card,
@@ -37,7 +44,10 @@ interface Props {
 }
 
 export function SingleLinkCreator({ defaultValues = {}, isEdit }: Props) {
+  const navigate = useNavigate();
+  const submit = useSubmit();
   const actionData = useActionData();
+
   const [form, fields] = useForm({
     id: 'create-single-link-form',
     lastResult: actionData,
@@ -49,6 +59,23 @@ export function SingleLinkCreator({ defaultValues = {}, isEdit }: Props) {
       isActive: 'on',
       trackClicks: 'on',
       ...defaultValues,
+    },
+
+    onSubmit(event, context) {
+      if (!isEdit) return;
+
+      if (!form.dirty) {
+        event.preventDefault();
+        navigate(href('/dashboard/links'));
+        return;
+      }
+
+      const formData = context.formData;
+      if (formData.get('originalUrl') !== defaultValues.originalUrl) return;
+
+      event.preventDefault();
+      formData.delete('originalUrl');
+      submit(formData, { method: context.method });
     },
   });
 
