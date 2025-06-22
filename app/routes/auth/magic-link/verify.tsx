@@ -1,5 +1,5 @@
 import { AlertCircle } from 'lucide-react';
-import { href, Link, redirect, type LoaderFunctionArgs } from 'react-router';
+import { href, Link, redirect } from 'react-router';
 import { authSession } from '~/auth/session.server';
 import { Button } from '~/components/ui/button';
 import {
@@ -13,8 +13,9 @@ import {
 import { db } from '~/db';
 import { AUTH_PROVIDER, identities, users } from '~/db/schema.server';
 import { verifyMagicLinkToken } from '~/lib/magic-link.server';
+import type { Route } from './+types/verify';
 
-export async function loader({ request }: LoaderFunctionArgs) {
+export async function loader({ request }: Route.LoaderArgs) {
   const { email, isValid } = await verifyMagicLinkToken(request);
   if (!isValid || !email) {
     return Response.json({ error: 'Invalid token' }, { status: 400 });
@@ -86,3 +87,7 @@ export default function MagicLinkErrorPage() {
     </Card>
   );
 }
+
+export const meta: Route.MetaDescriptors = [
+  { title: 'Magic Link Verification' },
+];
