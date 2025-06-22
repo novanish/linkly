@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '~/components/ui/card';
+import { loadLinkFiltersSearchParams } from '~/hooks/use-link-filters';
 import { loadPaginationSearchParams } from '~/hooks/use-pagination';
 import { loadSortSearchParams } from '~/hooks/use-sort';
 import { ACTION_NAME } from '~/lib/consts';
@@ -16,12 +17,12 @@ import {
   getLinksData,
   updateLinkActiveStatus,
 } from '~/models/links.server';
+import { linkIdSchema } from '~/validations/link.schema';
 import type { Route } from './+types/links';
-import { SearchBar } from './_components/links/search';
-import { LinksPagination, PerPage } from './_components/pagination';
-import { LinksTable } from './_components/links/table';
 import { ActiveFilters, LinkFilter } from './_components/links/filter';
-import { loadLinkFiltersSearchParams } from '~/hooks/use-link-filters';
+import { SearchBar } from './_components/links/search';
+import { LinksTable } from './_components/links/table';
+import { LinksPagination, PerPage } from './_components/pagination';
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await authSession.require(request);
@@ -59,7 +60,7 @@ export async function action({ request }: Route.ActionArgs) {
   const user = await authSession.require(request);
   const formData = await request.formData();
   const action = formData.get(ACTION_NAME);
-  const linkId = formData.get('linkId') as string; // TODO: Validate this
+  const linkId = linkIdSchema.parse(formData.get('linkId'));
 
   switch (action) {
     case ACTION.UPDATE_LINK_ACTIVE_STATUS: {

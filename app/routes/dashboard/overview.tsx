@@ -1,4 +1,4 @@
-import { ExternalLink } from 'lucide-react';
+import { QrCode } from 'lucide-react';
 import {
   href,
   Link,
@@ -33,6 +33,7 @@ import {
   getUserStats,
   updateLinkActiveStatus,
 } from '~/models/links.server';
+import { linkIdSchema } from '~/validations/link.schema';
 import type { Route } from './+types/overview';
 import { OverviewStats } from './_components/stats/overview';
 
@@ -62,7 +63,7 @@ export async function action({ request }: Route.ActionArgs) {
   switch (action) {
     case ACTION.UPDATE_LINK_ACTIVE_STATUS: {
       const isActive = formData.get('isActive') === 'on';
-      const linkId = formData.get('linkId') as string;
+      const linkId = linkIdSchema.parse(formData.get('linkId'));
       await updateLinkActiveStatus({ userId: user.id, isActive, linkId });
       return null;
     }
@@ -134,9 +135,16 @@ export default function DashboardOverview({
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <CopyButton text={shortUrl} variant="outline" />
-                        <Button variant="ghost" size="icon">
-                          <ExternalLink className="h-4 w-4" />
-                          <span className="sr-only">View</span>
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link
+                            to={{
+                              pathname: href('/link/qr'),
+                              search: '?url=' + shortUrl,
+                            }}
+                          >
+                            <QrCode className="h-4 w-4" />
+                            <span className="sr-only">Qr Code</span>
+                          </Link>
                         </Button>
                       </div>
                     </TableCell>
