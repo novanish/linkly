@@ -4,21 +4,18 @@ import {
   boolean,
   index,
   pgEnum,
+  pgSequence,
   pgTable,
   text,
   timestamp,
   uniqueIndex,
+  integer,
 } from 'drizzle-orm/pg-core';
+import { DEVICE_TYPE, PHISHING_STATUS } from '~/lib/consts';
 
 export const AUTH_PROVIDER = {
   GOOGLE: 'google',
   MAGIC_LINK: 'magic_link',
-} as const;
-
-export const PHISHING_STATUS = {
-  SAFE: 'safe',
-  PHISHING: 'phishing',
-  SUSPICIOUS: 'suspicious',
 } as const;
 
 export const TRAFFIC_SOURCE = {
@@ -38,6 +35,13 @@ export const phishingStatusEnum = pgEnum('phishing_status', [
   PHISHING_STATUS.SUSPICIOUS,
 ]);
 
+export const deviceTypeEnum = pgEnum('device_type', [
+  DEVICE_TYPE.DESKTOP,
+  DEVICE_TYPE.MOBILE,
+  DEVICE_TYPE.TABLET,
+  DEVICE_TYPE.UNKNOWN,
+]);
+
 export const trafficSourceEnum = pgEnum('traffic_source', [
   TRAFFIC_SOURCE.DIRECT,
   TRAFFIC_SOURCE.SOCIAL,
@@ -53,12 +57,17 @@ const updatedAt = timestamp('updated_at', { withTimezone: true })
   .defaultNow()
   .$onUpdate(() => new Date());
 
+export const linkSequence = pgSequence('link_sequence', {
+  startWith: 5000,
+  increment: 1,
+  cache: 1,
+});
+
 export const users = pgTable('users', {
   id,
-  email: text('email').notNull().unique(),
   name: text('name'),
+  email: text('email').notNull().unique(),
   avatarUrl: text('avatar_url'),
-
   createdAt,
   updatedAt,
 });
@@ -75,7 +84,6 @@ export const identities = pgTable(
     userId: text('user_id').references(() => users.id),
     provider: authProviderEnum('provider').notNull(),
     providerId: text('provider_id').notNull(),
-
     createdAt,
     updatedAt,
   },
@@ -95,15 +103,16 @@ export const links = pgTable(
   'links',
   {
     id,
-    userId: text('user_id').references(() => users.id),
-
+    userId: text('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
     shortCode: text('short_code').notNull(),
     originalUrl: text('original_url').notNull(),
     customAlias: text('custom_alias'),
-
     isActive: boolean('is_active').default(true).notNull(),
+    trackClicks: boolean('track_clicks').default(true).notNull(),
     phishingStatus: phishingStatusEnum('phishing_status').notNull(),
-
+    clicksCount: integer('clicks_count').default(0),
     createdAt,
     updatedAt,
   },
@@ -129,13 +138,13 @@ export const clicks = pgTable(
   'clicks',
   {
     id,
-    linkId: text('link_id').references(() => links.id),
-
+    linkId: text('link_id').references(() => links.id, { onDelete: 'cascade' }),
     ipAddress: text('ip_address'),
-    userAgent: text('user_agent'),
+    deviceType: deviceTypeEnum('device_type')
+      .notNull()
+      .default(DEVICE_TYPE.UNKNOWN),
     referrer: text('referrer'),
     trafficSource: trafficSourceEnum('traffic_source').notNull(),
-
     clickedAt: timestamp('clicked_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
