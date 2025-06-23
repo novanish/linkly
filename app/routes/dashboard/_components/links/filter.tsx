@@ -200,7 +200,9 @@ export function ActiveFilters() {
                       const newActive = filter.isActive?.filter(
                         (value) => value !== option.value,
                       );
-                      setFilter({ isActive: newActive });
+                      setFilter({
+                        isActive: newActive?.length === 0 ? null : newActive,
+                      });
                     }}
                   >
                     <X className="h-3 w-3" />
@@ -229,7 +231,12 @@ export function ActiveFilters() {
                       const newPhishingStatus = filter.phishingStatus?.filter(
                         (value) => value !== option.value,
                       );
-                      setFilter({ phishingStatus: newPhishingStatus });
+                      setFilter({
+                        phishingStatus:
+                          newPhishingStatus?.length === 0
+                            ? null
+                            : newPhishingStatus,
+                      });
                     }}
                   >
                     <X className="h-3 w-3" />
