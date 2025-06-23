@@ -1,10 +1,27 @@
-import { and, asc, count, desc, eq, gte, ilike, or, sql } from 'drizzle-orm';
+import { endOfDay } from 'date-fns';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  lte,
+  or,
+  SQL,
+  sql,
+} from 'drizzle-orm';
 import { db } from '~/db';
+import { isUniqueViolationError } from '~/db/errors.server';
 import { clicks, links, linkSequence } from '~/db/schema.server';
+import { orderByEnum } from '~/db/utils.server';
 import { PHISHING_STATUS } from '~/lib/consts';
 import { getStartAndEndDates, toBase62 } from '~/lib/utils';
+import type { UpdateLinkSchema } from '~/validations/link.schema';
 
-async function checkURLPhishingStatus(url: string) {
+async function getURLPhishingStatus(url: string) {
   console.log('Checking URL phishing status:', url);
   const status = [
     PHISHING_STATUS.SAFE,
@@ -23,13 +40,46 @@ export async function createLink(
     sql`SELECT NEXTVAL(${linkSequence.seqName})`,
   );
   const shortCode = toBase62(Number(result.rows[0].nextval));
-  const phishingStatus = await checkURLPhishingStatus(data.originalUrl);
+  const phishingStatus = await getURLPhishingStatus(data.originalUrl);
 
   return db
     .insert(links)
     .values({ ...data, shortCode, phishingStatus })
     .returning({ id: links.id })
     .then(([result]) => result.id);
+}
+
+export async function updateLink(
+  userId: string,
+  linkId: string,
+  data: UpdateLinkSchema,
+) {
+  const dataToUpdate = {
+    ...data,
+    phishingStatus: data.originalUrl
+      ? await getURLPhishingStatus(data.originalUrl)
+      : undefined,
+  } satisfies Partial<typeof links.$inferInsert>;
+
+  return db
+    .update(links)
+    .set(dataToUpdate)
+    .where(and(eq(links.userId, userId), eq(links.id, linkId)));
+}
+
+export function getLinkForEdit({
+  userId,
+  linkId,
+}: Record<'userId' | 'linkId', string>) {
+  return db.query.links.findFirst({
+    columns: {
+      isActive: true,
+      originalUrl: true,
+      customAlias: true,
+      trackClicks: true,
+    },
+    where: and(eq(links.userId, userId), eq(links.id, linkId)),
+  });
 }
 
 export function getTopLinks(userId: string, limit = 7) {
@@ -42,7 +92,12 @@ export function getTopLinks(userId: string, limit = 7) {
 
 export function getOriginalUrl(identifier: string, isShortCode: boolean) {
   return db.query.links.findFirst({
-    columns: { id: true, originalUrl: true, phishingStatus: true },
+    columns: {
+      id: true,
+      originalUrl: true,
+      phishingStatus: true,
+      trackClicks: true,
+    },
     where: and(
       isShortCode
         ? eq(links.shortCode, identifier)
@@ -73,34 +128,82 @@ export function deleteLinkById({
 }
 
 export async function getLinksData(options: GetLinksDataOptions) {
-  const { userId, limit = 10, page = 1, search = null } = options;
+  const {
+    to,
+    from,
+    userId,
+    search,
+    isActive,
+    page = 1,
+    limit = 10,
+    phishingStatus,
+    orderBy = 'createdAt',
+    orderDirection = 'desc',
+  } = options;
 
+  const conditions: Array<SQL | undefined> = [eq(links.userId, userId)];
   const offset = (page - 1) * limit;
-  const eqToUserId = eq(links.userId, userId);
-  const searchTerm = search ? search.trim().replace(/\s+/g, '-') : null;
-  const searchTermRegex = `%${searchTerm}%`;
 
-  const whereCondition = search
-    ? and(
-        eqToUserId,
-        or(
-          ilike(links.originalUrl, searchTermRegex),
-          ilike(links.customAlias, searchTermRegex),
-        ),
-      )
-    : eqToUserId;
+  if (search) {
+    const searchTerm = search ? search.trim().replace(/\s+/g, '-') : null;
+    const searchTermRegex = `%${searchTerm}%`;
+    conditions.push(
+      or(
+        ilike(links.originalUrl, searchTermRegex),
+        ilike(links.customAlias, searchTermRegex),
+      ),
+    );
+  }
+
+  if (isActive && isActive.length > 0) {
+    conditions.push(inArray(links.isActive, isActive));
+  }
+
+  if (phishingStatus && phishingStatus.length > 0) {
+    conditions.push(inArray(links.phishingStatus, phishingStatus));
+  }
+
+  if (from && to) {
+    conditions.push(
+      and(gte(links.createdAt, from), lte(links.createdAt, endOfDay(to))),
+    );
+  } else if (from) {
+    conditions.push(gte(links.createdAt, from));
+  } else if (to) {
+    conditions.push(lte(links.createdAt, endOfDay(to)));
+  }
+
+  const orderByPhishingStatus = orderByEnum(
+    links.phishingStatus,
+    [
+      PHISHING_STATUS.SAFE,
+      PHISHING_STATUS.SUSPICIOUS,
+      PHISHING_STATUS.PHISHING,
+    ],
+    orderDirection,
+  );
+
+  const where = and(...conditions);
+  const orderByClause =
+    orderBy === 'phishingStatus'
+      ? orderByPhishingStatus
+      : orderDirection === 'asc'
+        ? asc(links[orderBy])
+        : desc(links[orderBy]);
 
   const result = await Promise.all([
     db.query.links.findMany({
-      where: whereCondition,
-      orderBy: desc(links.createdAt),
+      columns: { userId: false, updatedAt: false },
+      where,
+      orderBy: orderByClause,
       limit,
       offset,
     }),
+
     db
       .select({ totalLinks: count() })
       .from(links)
-      .where(whereCondition)
+      .where(where)
       .then(([result]) => result.totalLinks),
   ]);
 
@@ -185,6 +288,10 @@ async function getClickStatistics(
   return result[0];
 }
 
+export function isDuplicateCustomAliasError(error: unknown) {
+  return isUniqueViolationError(error, 'idx_custom_alias');
+}
+
 interface UpdateLinkActiveStatusParams {
   userId: string;
   linkId: string;
@@ -196,4 +303,12 @@ interface GetLinksDataOptions {
   limit?: number;
   page?: number;
   search?: string | null;
+  orderBy?: 'createdAt' | 'clicksCount' | 'isActive' | 'phishingStatus';
+  orderDirection?: 'asc' | 'desc';
+  phishingStatus?: Array<ValueOf<typeof PHISHING_STATUS>> | null;
+  from?: Date | null;
+  to?: Date | null;
+  isActive?: Array<boolean> | null;
 }
+
+type ValueOf<T> = T[keyof T];
