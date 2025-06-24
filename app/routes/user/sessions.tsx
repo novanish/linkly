@@ -32,13 +32,12 @@ export async function loader({ request }: Route.LoaderArgs) {
     return redirect(href('/auth/login'));
   }
 
-  const sessions = activeSessions.map((session) => {
+  const sessions = activeSessions.map((session, index) => {
     // TODO: Handle null userAgent
     const result = UAParser(session.userAgent!);
-    console.log(result);
 
     return {
-      sessionId: session.id,
+      publicId: index, // TODO: Store publicId in session and use it here
       isCurrentSession: session.isCurrentSession,
       loggedInAt: new Date(session.createdAt).toLocaleString('en-US', {
         dateStyle: 'medium',
@@ -52,25 +51,11 @@ export async function loader({ request }: Route.LoaderArgs) {
   return { sessions };
 }
 
-const getPlatformIcon = (platform: string) => {
-  switch (platform) {
-    case 'desktop':
-      return <Monitor className="h-4 w-4 text-blue-600" />;
-    case 'mobile':
-      return <Smartphone className="h-4 w-4 text-green-600" />;
-    case 'tablet':
-      return <Tablet className="h-4 w-4 text-purple-600" />;
-    default:
-      return <Globe className="h-4 w-4 text-gray-600" />;
-  }
-};
-
-const getBrowserIcon = (browser: string) => {
-  if (browser.toLowerCase().includes('chrome')) {
-    return <Chrome className="h-3.5 w-3.5 text-gray-500" />;
-  }
-  return <Globe className="h-3.5 w-3.5 text-gray-500" />;
-};
+export async function action({ request }: Route.ActionArgs) {
+  const userId = await authSession.getUserId(request);
+  if (userId) await authSession.destroyAllForUser(userId);
+  return redirect(href('/'));
+}
 
 export default function SessionManager({ loaderData }: Route.ComponentProps) {
   const { sessions } = loaderData;
@@ -91,14 +76,15 @@ export default function SessionManager({ loaderData }: Route.ComponentProps) {
             <Button type="submit">
               <span className="flex items-center space-x-2">
                 <LogOut className="h-4 w-4" />
-                <span>Log Out from all devices</span>
+                <span>Log Out from all devices</span>{' '}
+                {/* TODO: Add confirmation dialog before deleteing */}
               </span>
             </Button>
           </Form>
 
           <div className="space-y-0">
             {sessions.map((session, index) => (
-              <div key={session.sessionId}>
+              <div key={session.publicId}>
                 <div className="group flex items-center justify-between rounded-md px-1 py-3 transition-colors hover:bg-gray-50">
                   <div className="flex min-w-0 flex-1 items-center space-x-3">
                     <div className="flex-shrink-0">
@@ -171,3 +157,23 @@ export default function SessionManager({ loaderData }: Route.ComponentProps) {
     </div>
   );
 }
+
+const getPlatformIcon = (platform: string) => {
+  switch (platform) {
+    case 'desktop':
+      return <Monitor className="h-4 w-4 text-blue-600" />;
+    case 'mobile':
+      return <Smartphone className="h-4 w-4 text-green-600" />;
+    case 'tablet':
+      return <Tablet className="h-4 w-4 text-purple-600" />;
+    default:
+      return <Globe className="h-4 w-4 text-gray-600" />;
+  }
+};
+
+const getBrowserIcon = (browser: string) => {
+  if (browser.toLowerCase().includes('chrome')) {
+    return <Chrome className="h-3.5 w-3.5 text-gray-500" />;
+  }
+  return <Globe className="h-3.5 w-3.5 text-gray-500" />;
+};
