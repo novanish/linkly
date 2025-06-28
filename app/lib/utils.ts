@@ -111,6 +111,24 @@ export async function retry(cb: () => Promise<void>, options: RetryOptions) {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function throtle<T extends (...args: any[]) => void>(
+  func: T,
+  delay: number,
+) {
+  let canCall = true;
+
+  return function (...args: Parameters<T>) {
+    if (canCall) {
+      func(...args);
+      canCall = false;
+      setTimeout(() => {
+        canCall = true;
+      }, delay);
+    }
+  };
+}
+
 interface GetShortUrlArgs {
   shortCode: string;
   customAlias?: string | null;
