@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Form, useSearchParams } from 'react-router';
 import QRCode from 'qrcode';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router';
+import { toast } from 'sonner';
 import { Button } from '~/components/ui/button';
+import { Card, CardContent } from '~/components/ui/card';
 import { FormItem, FormLabel } from '~/components/ui/form';
 import { Input } from '~/components/ui/input';
-import { Card, CardContent } from '~/components/ui/card';
-import { toast } from 'sonner';
+import { throtle } from '~/lib/utils';
 
 export default function CreateQr() {
   return (
@@ -31,72 +32,57 @@ export default function CreateQr() {
   );
 }
 
-function throtle<T extends (...args: any[]) => void>(func: T, delay: number) {
-  let canCall = true;
-
-  return function (...args: Parameters<T>) {
-    if (canCall) {
-      func(...args);
-      canCall = false;
-      setTimeout(() => {
-        canCall = true;
-      }, delay);
-    }
-  };
-}
-
 export function QrCodeGenerator() {
   const [searchParams] = useSearchParams();
-  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
-  const [colors, setColors] = useState({
+  const qrStateRef = useRef({
     foreground: '#000000',
     background: '#FFFFFF',
+    url: searchParams.get('url') || window.location.href,
   });
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
 
-  async function onSubmit() {
-    try {
-      const url = await QRCode.toDataURL(
-        searchParams.get('url') || window.location.href,
-        {
-          width: 500,
-          color: {
-            dark: colors.foreground,
-            light: colors.background,
-          },
-          errorCorrectionLevel: 'M',
-          type: 'image/png',
-        },
-      );
-      setQrCodeDataUrl(url);
-    } catch (error) {
-      toast.error('Failed to generate QR code. Please try again.');
-    }
-  }
+  useLayoutEffect(() => {
+    getQRCodeDataUrl(qrStateRef.current)
+      .then((url) => {
+        setQrCodeDataUrl(url);
+      })
+      .catch(() => {
+        toast.error('Failed to generate QR code. Please try again.');
+      });
+  }, []);
 
-  useEffect(() => {
-    onSubmit();
-  }, [colors]);
+  const createQr = useMemo(() => {
+    return throtle(async () => {
+      const qrState = qrStateRef.current;
+      if (!qrState.url) {
+        setQrCodeDataUrl('');
+        return;
+      }
 
-  const throttledSetColors = useCallback(throtle(setColors, 500), []);
+      try {
+        const url = await getQRCodeDataUrl(qrState);
+        setQrCodeDataUrl(url);
+      } catch {
+        toast.error('Failed to generate QR code. Please try again.');
+      }
+    }, 500);
+  }, []);
 
   return (
     <div className="container mx-auto py-10">
       <div className="flex flex-col-reverse space-y-6 md:flex-row md:space-y-0 md:space-x-6">
         <div className="rounded-lg md:w-1/3">
-          <Form
-            className="space-y-6"
-            onSubmit={(e) => {
-              e.preventDefault();
-              onSubmit();
-            }}
-          >
+          <div className="space-y-6">
             <FormItem>
               <FormLabel>URL</FormLabel>
               <Input
                 type="url"
                 placeholder="https://example.com"
-                value={searchParams.get('url') || 'www.youtube.com'}
-                disabled
+                defaultValue={qrStateRef.current.url}
+                onChange={(e) => {
+                  qrStateRef.current.url = e.target.value;
+                  createQr();
+                }}
                 name="url"
               />
             </FormItem>
@@ -105,13 +91,11 @@ export function QrCodeGenerator() {
               <FormLabel>Foreground Color</FormLabel>
               <Input
                 type="color"
-                defaultValue={colors.foreground}
+                defaultValue={qrStateRef.current.foreground}
                 name="foregroundColor"
                 onChange={(e) => {
-                  throttledSetColors((prev) => ({
-                    ...prev,
-                    foreground: e.target.value,
-                  }));
+                  qrStateRef.current.foreground = e.target.value;
+                  createQr();
                 }}
               />
             </FormItem>
@@ -120,17 +104,15 @@ export function QrCodeGenerator() {
               <FormLabel>Background Color</FormLabel>
               <Input
                 type="color"
-                defaultValue={colors.background}
+                defaultValue={qrStateRef.current.background}
                 name="backgroundColor"
                 onChange={(e) => {
-                  throttledSetColors((prev) => ({
-                    ...prev,
-                    background: e.target.value,
-                  }));
+                  qrStateRef.current.background = e.target.value;
+                  createQr();
                 }}
               />
             </FormItem>
-          </Form>
+          </div>
         </div>
 
         <div className="flex w-full flex-col items-center justify-center rounded-lg p-4 md:w-2/3">
@@ -155,3 +137,25 @@ export function QrCodeGenerator() {
     </div>
   );
 }
+
+function getQRCodeDataUrl({
+  background,
+  foreground,
+  url,
+}: QRCodeState): Promise<string> {
+  return QRCode.toDataURL(url, {
+    width: 500,
+    color: {
+      dark: foreground,
+      light: background,
+    },
+    errorCorrectionLevel: 'M',
+    type: 'image/png',
+  });
+}
+
+type QRCodeState = {
+  foreground: string;
+  background: string;
+  url: string;
+};
