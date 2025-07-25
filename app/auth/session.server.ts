@@ -20,22 +20,31 @@ const SessionDataSchema = z.object({
   ip: z.string().optional().nullable(),
 });
 
-export type SessionData = z.infer<typeof SessionDataSchema>;
+export type SessionData = z.infer<typeof SessionDataSchema> & {
+  publicId: string;
+};
 
 interface RedisSessionStorageOptions {
   cookie: Omit<CookieOptions, 'maxAge' | 'expires'> & Record<'name', string>;
   ttl: number; // in seconds
 }
 
+const getPublicSessionKey = (publicId: string) =>
+  `public_session:${publicId}` as const;
+const getSessionKey = (sessionId: string) => `session:${sessionId}` as const;
+const getSessionIndexKey = (sessionId: string) =>
+  `session_user:${sessionId}` as const;
+const getUserSessionsKey = (userId: string) =>
+  `user_sessions:${userId}` as const;
+
 function createRedisSessionStorage(options: RedisSessionStorageOptions) {
   const { ttl, cookie } = options;
 
-  const getSessionKey = (id: string) => `session:${id}`;
-  const getSessionIndexKey = (id: string) => `session_user:${id}`;
-  const getUserSessionsKey = (userId: string) => `user_sessions:${userId}`;
-
   return createSessionStorage({
-    cookie,
+    cookie: {
+      ...cookie,
+      maxAge: ttl,
+    },
 
     async createData(data) {
       const parsed = SessionDataSchema.safeParse({
@@ -46,14 +55,19 @@ function createRedisSessionStorage(options: RedisSessionStorageOptions) {
         throw new Error('Invalid session data');
       }
 
-      const sessionData = parsed.data;
+      const publicId = createId();
+      const sessionData = {
+        ...parsed.data,
+        publicId,
+      };
       const id = createId();
       const sessionKey = getSessionKey(id);
       const sessionIndexKey = getSessionIndexKey(id);
       const userSessionsKey = getUserSessionsKey(sessionData.userId);
 
-      const pipeline = redisClient.pipeline();
+      const pipeline = redisClient.multi();
       pipeline.set(sessionKey, JSON.stringify(sessionData));
+      pipeline.set(getPublicSessionKey(publicId), id);
       pipeline.expire(sessionKey, ttl);
       pipeline.set(sessionIndexKey, sessionData.userId);
       pipeline.expire(sessionIndexKey, ttl);
@@ -72,9 +86,10 @@ function createRedisSessionStorage(options: RedisSessionStorageOptions) {
       // Implement sliding expiration
       const ttlRemaining = await redisClient.ttl(sessionKey);
       if (ttlRemaining > 0 && ttlRemaining < ttl / 2) {
-        const pipeline = redisClient.pipeline();
+        const pipeline = redisClient.multi();
         pipeline.expire(sessionKey, ttl);
         pipeline.expire(getSessionIndexKey(id), ttl);
+        pipeline.expire(getPublicSessionKey(id), ttl);
         await pipeline.exec();
       }
 
@@ -112,13 +127,15 @@ function createRedisSessionStorage(options: RedisSessionStorageOptions) {
     },
 
     async deleteData(id) {
-      const userId = await redisClient.get(getSessionIndexKey(id));
-      if (!userId) return;
+      const rawSession = await redisClient.get(getSessionKey(id));
+      if (!rawSession) return;
+      const session = JSON.parse(rawSession) as SessionData;
 
-      const pipeline = redisClient.pipeline();
+      const pipeline = redisClient.multi();
       pipeline.del(getSessionKey(id));
       pipeline.del(getSessionIndexKey(id));
-      pipeline.srem(getUserSessionsKey(userId), id);
+      pipeline.srem(getUserSessionsKey(session.userId), id);
+      pipeline.del(getPublicSessionKey(session.publicId));
       await pipeline.exec();
     },
   });
@@ -238,16 +255,30 @@ async function destroyUserSession(request: Request) {
   return destroySession(session);
 }
 
+async function destroySessionByPublicId(publicId: string) {
+  const sessionId = await redisClient.get(getPublicSessionKey(publicId));
+  if (!sessionId) return;
+
+  const pipeline = redisClient.multi();
+  pipeline.del(getSessionKey(sessionId));
+  pipeline.del(getSessionIndexKey(sessionId));
+  pipeline.del(getPublicSessionKey(publicId));
+  pipeline.srem(getUserSessionsKey(sessionId), sessionId);
+  await pipeline.exec();
+}
+
 async function destroyAllSessionsForUser(userId: string) {
-  const userSessionsKey = `user_sessions:${userId}`;
+  const userSessionsKey = getUserSessionsKey(userId);
   const sessionIds = await redisClient.smembers(userSessionsKey);
   if (sessionIds.length === 0) return;
 
   const pipeline = redisClient.pipeline();
   for (const sessionId of sessionIds) {
-    pipeline.del(`session:${sessionId}`);
-    pipeline.del(`session_user:${sessionId}`);
+    pipeline.del(getSessionKey(sessionId));
+    pipeline.del(getSessionIndexKey(sessionId));
+    // TODO: Delete associated public session key
   }
+
   pipeline.del(userSessionsKey);
   await pipeline.exec();
 }
@@ -267,4 +298,5 @@ export const authSession = {
   destroyAllForUser: destroyAllSessionsForUser,
   redirectIfLoggedIn,
   getAllSessionsForLoggedInUser,
+  destroySessionByPublicId,
 };
