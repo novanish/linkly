@@ -15,7 +15,6 @@ import { getUserById } from '~/models/users.server';
 const SessionDataSchema = z.object({
   userId: z.string(),
   createdAt: z.string(),
-  extra: z.record(z.unknown()).optional(),
   userAgent: z.string().optional().nullable(),
   ip: z.string().optional().nullable(),
 });
@@ -158,19 +157,14 @@ const { commitSession, getSession, destroySession } = createRedisSessionStorage(
 async function createUserSession({
   request,
   userId,
-  extraData,
 }: {
   userId: string;
   request: Request;
-  extraData?: Record<string, unknown>;
 }) {
   const session = await getSession();
   session.set('userId', userId);
   session.set('userAgent', request.headers.get('User-Agent'));
   session.set('ip', getClientIPAddress(request));
-  if (extraData) {
-    session.set('extra', extraData);
-  }
 
   return commitSession(session);
 }
