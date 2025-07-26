@@ -112,7 +112,7 @@ export async function retry(cb: () => Promise<void>, options: RetryOptions) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function throtle<T extends (...args: any[]) => void>(
+export function throttle<T extends (...args: any[]) => void>(
   func: T,
   delay: number,
 ) {

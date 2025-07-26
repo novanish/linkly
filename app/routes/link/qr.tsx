@@ -6,7 +6,7 @@ import { Button } from '~/components/ui/button';
 import { Card, CardContent } from '~/components/ui/card';
 import { FormItem, FormLabel } from '~/components/ui/form';
 import { Input } from '~/components/ui/input';
-import { throtle } from '~/lib/utils';
+import { throttle } from '~/lib/utils';
 
 export default function CreateQr() {
   return (
@@ -52,7 +52,7 @@ export function QrCodeGenerator() {
   }, []);
 
   const createQr = useMemo(() => {
-    return throtle(async () => {
+    return throttle(async () => {
       const qrState = qrStateRef.current;
       if (!qrState.url) {
         setQrCodeDataUrl('');

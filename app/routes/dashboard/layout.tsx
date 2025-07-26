@@ -4,8 +4,11 @@ import { href, Link, Outlet } from 'react-router';
 import { Button } from '~/components/ui/button';
 import { Dialog, DialogTrigger } from '~/components/ui/dialog';
 import { DashboardSubNav } from './_components/nav/sub-nav';
+import { useRevalidateOnLinkUpdate } from './useRevalidateOnLinkUpdate';
 
 export default function DashboardLayout() {
+  useRevalidateOnLinkUpdate();
+
   return (
     <>
       <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">

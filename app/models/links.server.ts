@@ -97,6 +97,7 @@ export function getOriginalUrl(identifier: string, isShortCode: boolean) {
       originalUrl: true,
       phishingStatus: true,
       trackClicks: true,
+      userId: true,
     },
     where: and(
       isShortCode

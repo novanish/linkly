@@ -32,9 +32,16 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     throw new Response('Not Found', { status: 404 });
   }
 
-  if (link.trackClicks) void recordClickAnalytics(request, link.id);
-  if (link.phishingStatus === PHISHING_STATUS.SAFE)
+  if (link.trackClicks) {
+    void recordClickAnalytics(request, {
+      linkId: link.id,
+      userId: link.userId,
+    });
+  }
+
+  if (link.phishingStatus === PHISHING_STATUS.SAFE) {
     return redirect(link.originalUrl);
+  }
 
   return {
     destination: link.originalUrl,

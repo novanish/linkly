@@ -4,11 +4,16 @@ import ms from 'ms';
 import { getClientIPAddress } from 'remix-utils/get-client-ip-address';
 import { UAParser } from 'ua-parser-js';
 import { db } from '~/db';
+import { redisClient } from '~/db/redis.server';
 import { clicks, links, TRAFFIC_SOURCE } from '~/db/schema.server';
 import { DEVICE_TYPE } from '~/lib/consts';
+import { redisChannelNames } from '~/lib/redis-channels.server';
 import { retry, type RetryOptions } from '~/lib/utils';
 
-export async function recordClickAnalytics(request: Request, linkId: string) {
+export async function recordClickAnalytics(
+  request: Request,
+  { userId, linkId }: Record<'userId' | 'linkId', string>,
+) {
   try {
     const headers = request.headers;
     const referrer = headers.get('referer') || null;
@@ -44,7 +49,8 @@ export async function recordClickAnalytics(request: Request, linkId: string) {
       retryAfter: ms('3 seconds'),
     };
 
-    retry(insertClickAndIncrementCount, retryOptions);
+    await retry(insertClickAndIncrementCount, retryOptions);
+    await redisClient.publish(redisChannelNames.linkUpdate(userId), 'click');
   } catch (error) {
     console.error('Error recording click analytics:', error);
   }
