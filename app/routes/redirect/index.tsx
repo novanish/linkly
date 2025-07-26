@@ -7,7 +7,7 @@ import {
   Link2,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Link, redirect } from 'react-router';
+import { href, Link, redirect } from 'react-router';
 import { Footer } from '~/components/footer';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 import { Button } from '~/components/ui/button';
@@ -20,9 +20,9 @@ import {
   CardTitle,
 } from '~/components/ui/card';
 import { APP_NAME, PHISHING_STATUS } from '~/lib/consts';
+import { recordClickAnalytics } from '~/models/clicks.server';
 import { getOriginalUrl } from '~/models/links.server';
 import type { Route } from './+types/index';
-import { recordClickAnalytics } from '~/models/clicks.server';
 
 export async function loader({ request, params }: Route.LoaderArgs) {
   const url = new URL(request.url);
@@ -53,7 +53,7 @@ export default function PhishingWarningPage({
     <div className="flex min-h-screen flex-col">
       <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 w-full border-b backdrop-blur">
         <div className="container flex h-16 items-center">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to={href('/')} className="flex items-center gap-2">
             <Link2 className="h-6 w-6 text-rose-500" />
             <span className="text-xl font-bold">{APP_NAME}</span>
           </Link>
@@ -139,7 +139,7 @@ export default function PhishingWarningPage({
                 className="w-full flex-1 bg-rose-500 hover:bg-rose-600 sm:w-auto"
                 asChild
               >
-                <Link to="/">
+                <Link to={href('/')}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Return to Safety
                 </Link>
@@ -212,7 +212,7 @@ export function ErrorBoundary() {
                 size="lg"
                 asChild
               >
-                <Link to="/">
+                <Link to={href('/')}>
                   <Home className="mr-2 h-4 w-4" />
                   Go to Homepage
                 </Link>
@@ -226,6 +226,8 @@ export function ErrorBoundary() {
     </div>
   );
 }
+
+export const meta: Route.MetaDescriptors = [{ title: APP_NAME }];
 
 function getPhishingStatusMeta(
   status: (typeof PHISHING_STATUS)[keyof typeof PHISHING_STATUS],

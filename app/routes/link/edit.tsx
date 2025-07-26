@@ -55,7 +55,7 @@ export async function action({ request, params }: Route.ActionArgs) {
   return redirect(href('/dashboard/links'));
 }
 
-export function UpdateLink({ loaderData }: Route.ComponentProps) {
+export default function UpdateLink({ loaderData }: Route.ComponentProps) {
   return (
     <>
       <div className="flex flex-col space-y-2 pb-6">

@@ -38,12 +38,22 @@ type Column = {
   key: string;
   header: string;
   sortable: boolean;
-  className?: string;
+  className?: string | undefined;
 };
 
 const COLUMNS = [
-  { key: 'shortUrl', header: 'Short URL', sortable: false },
-  { key: 'originalUrl', header: 'Original URL', sortable: false },
+  {
+    key: 'shortUrl',
+    header: 'Short URL',
+    sortable: false,
+    className: undefined,
+  },
+  {
+    key: 'originalUrl',
+    header: 'Original URL',
+    sortable: false,
+    className: undefined,
+  },
   {
     key: 'createdAt',
     header: 'Created',
@@ -74,7 +84,7 @@ const COLUMNS = [
     sortable: false,
     className: 'text-right',
   },
-] as const satisfies Column[];
+] as const satisfies Array<Column>;
 
 export function LinksTable() {
   const { links } = useLinksLoaderData();
@@ -274,6 +284,7 @@ function ActionButton({ linkId, url }: ActionButtonProps) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
       <DeleteDialog
         actionValue={ACTION.DELETE_LINK}
         linkId={linkId}
