@@ -1,5 +1,5 @@
 import { isCuid } from '@paralleldrive/cuid2';
-import { z } from 'zod/v4';
+import { z } from 'zod';
 
 export const linkIdSchema = z.string().refine(isCuid);
 

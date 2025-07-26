@@ -26,6 +26,7 @@ export default [
     ...prefix('link', [
       route('create', 'routes/link/create.tsx'),
       route('edit/:linkId', 'routes/link/edit.tsx'),
+      route('qr', 'routes/link/qr.tsx'),
     ]),
 
     ...prefix('user', [

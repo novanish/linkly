@@ -4,7 +4,6 @@ import { CopyButton } from './copy';
 interface Props extends React.ComponentProps<typeof CopyButton> {
   shortUrl: string;
   showToast?: boolean;
-  text?: never;
 }
 
 export function CopyLinkButton({

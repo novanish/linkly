@@ -168,6 +168,45 @@ export async function getClickActivityByHour(userId: string) {
   return result;
 }
 
+export async function getDeviceAnalytics(userId: string) {
+  const countByDeviceType = (deviceType: string) =>
+    sql`COUNT(CASE WHEN device_type = ${deviceType} THEN 1 END)`.mapWith(
+      Number,
+    );
+
+  const [result] = await db
+    .select({
+      desktop: countByDeviceType(DEVICE_TYPE.DESKTOP),
+      mobile: countByDeviceType(DEVICE_TYPE.MOBILE),
+      tablet: countByDeviceType(DEVICE_TYPE.TABLET),
+      unknown: countByDeviceType(DEVICE_TYPE.UNKNOWN),
+    })
+    .from(clicks)
+    .innerJoin(links, eq(clicks.linkId, links.id))
+    .where(eq(links.userId, userId));
+
+  const totalClicks = Object.values(result).reduce(
+    (acc, count) => acc + count,
+    0,
+  );
+
+  if (totalClicks === 0) {
+    return {
+      [DEVICE_TYPE.DESKTOP]: 0,
+      [DEVICE_TYPE.MOBILE]: 0,
+      [DEVICE_TYPE.TABLET]: 0,
+      [DEVICE_TYPE.UNKNOWN]: 0,
+    };
+  }
+
+  return {
+    [DEVICE_TYPE.DESKTOP]: Math.round((result.desktop / totalClicks) * 100),
+    [DEVICE_TYPE.MOBILE]: Math.round((result.mobile / totalClicks) * 100),
+    [DEVICE_TYPE.TABLET]: Math.round((result.tablet / totalClicks) * 100),
+    [DEVICE_TYPE.UNKNOWN]: Math.round((result.unknown / totalClicks) * 100),
+  };
+}
+
 function determineTrafficSource(request: Request) {
   const referer = request.headers.get('referer');
 
@@ -202,7 +241,7 @@ function determineTrafficSource(request: Request) {
   return TRAFFIC_SOURCE.DIRECT;
 }
 
-function getDeviceType({ device, os }: UAParser.IResult) {
+export function getDeviceType({ device, os }: UAParser.IResult) {
   switch (device.type) {
     case 'mobile':
       return DEVICE_TYPE.MOBILE;
