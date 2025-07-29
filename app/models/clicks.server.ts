@@ -50,9 +50,16 @@ export async function recordClickAnalytics(request: Request, linkId: string) {
   }
 }
 
-export async function calculateTrafficSourcePercentages(userId: string) {
+export async function calculateTrafficSourcePercentages(
+  userId: string,
+  linkId?: string,
+) {
   const countByTrafficSource = (source: string) =>
     sql`COUNT(CASE WHEN traffic_source = ${source} THEN 1 END)`.mapWith(Number);
+  const where = [eq(links.userId, userId)];
+  if (linkId) {
+    where.push(eq(clicks.linkId, linkId));
+  }
 
   const [result] = await db
     .select({
@@ -62,7 +69,7 @@ export async function calculateTrafficSourcePercentages(userId: string) {
     })
     .from(clicks)
     .innerJoin(links, eq(clicks.linkId, links.id))
-    .where(eq(links.userId, userId));
+    .where(and(...where));
 
   const totalClicks = Object.values(result).reduce(
     (acc, count) => acc + count,
@@ -79,8 +86,15 @@ export async function calculateTrafficSourcePercentages(userId: string) {
   };
 }
 
-export async function getClickActivityLast7Days(userId: string) {
+export async function getClickActivityLast7Days(
+  userId: string,
+  linkId?: string,
+) {
   const last7Days = new Date(Date.now() - ms('7d'));
+  const where = [eq(links.userId, userId), gte(clicks.clickedAt, last7Days)];
+  if (linkId) {
+    where.push(eq(clicks.linkId, linkId));
+  }
 
   const result = await db
     .select({
@@ -89,7 +103,7 @@ export async function getClickActivityLast7Days(userId: string) {
     })
     .from(clicks)
     .innerJoin(links, eq(clicks.linkId, links.id))
-    .where(and(eq(links.userId, userId), gte(clicks.clickedAt, last7Days)))
+    .where(and(...where))
     .groupBy(sql`DATE(clicked_at)`)
     .orderBy(sql`DATE(clicked_at)`);
 
@@ -113,8 +127,12 @@ export async function getClickActivityLast7Days(userId: string) {
   });
 }
 
-export async function getClickActivityByHour(userId: string) {
+export async function getClickActivityByHour(userId: string, linkId?: string) {
   const last24Hours = new Date(Date.now() - ms('24h'));
+  const where = [eq(links.userId, userId), gte(clicks.clickedAt, last24Hours)];
+  if (linkId) {
+    where.push(eq(clicks.linkId, linkId));
+  }
 
   const clickData = await db
     .select({
@@ -123,7 +141,7 @@ export async function getClickActivityByHour(userId: string) {
     })
     .from(clicks)
     .innerJoin(links, eq(clicks.linkId, links.id))
-    .where(and(eq(links.userId, userId), gte(clicks.clickedAt, last24Hours)))
+    .where(and(...where))
     .groupBy(sql`EXTRACT(HOUR FROM clicked_at)`);
 
   const clicksByHour = new Map();
@@ -168,11 +186,15 @@ export async function getClickActivityByHour(userId: string) {
   return result;
 }
 
-export async function getDeviceAnalytics(userId: string) {
+export async function getDeviceAnalytics(userId: string, linkId?: string) {
   const countByDeviceType = (deviceType: string) =>
     sql`COUNT(CASE WHEN device_type = ${deviceType} THEN 1 END)`.mapWith(
       Number,
     );
+  const where = [eq(links.userId, userId)];
+  if (linkId) {
+    where.push(eq(clicks.linkId, linkId));
+  }
 
   const [result] = await db
     .select({
@@ -183,7 +205,7 @@ export async function getDeviceAnalytics(userId: string) {
     })
     .from(clicks)
     .innerJoin(links, eq(clicks.linkId, links.id))
-    .where(eq(links.userId, userId));
+    .where(and(...where));
 
   const totalClicks = Object.values(result).reduce(
     (acc, count) => acc + count,

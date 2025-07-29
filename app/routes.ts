@@ -39,7 +39,7 @@ export default [
       prefix('dashboard', [
         route('overview', 'routes/dashboard/overview.tsx'),
         route('links', 'routes/dashboard/links.tsx'),
-        route('analytics', 'routes/dashboard/analytics.tsx'),
+        route('analytics/:linkId?', 'routes/dashboard/analytics.tsx'),
       ]),
     ),
   ]),

@@ -3,6 +3,7 @@ import {
   ArrowUp,
   ArrowUpDown,
   Edit,
+  EyeIcon,
   Link2,
   MoreHorizontal,
   QrCode,
@@ -256,6 +257,13 @@ function ActionButton({ linkId, url }: ActionButtonProps) {
             <Link to={href('/link/edit/:linkId', { linkId })}>
               <Edit className="mr-2 h-4 w-4" />
               Edit Link
+            </Link>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem asChild>
+            <Link to={href('/dashboard/analytics/:linkId?', { linkId })}>
+              <EyeIcon className="mr-2 h-4 w-4" />
+              View Analytics
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem

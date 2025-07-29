@@ -38,13 +38,18 @@ import {
 } from '~/models/clicks.server';
 import type { Route } from './+types/analytics';
 
-export async function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request, params }: Route.LoaderArgs) {
   const user = await authSession.require(request);
-  const trafficSourcePercentages = calculateTrafficSourcePercentages(user.id);
-  const deviceAnalytics = getDeviceAnalytics(user.id);
+  const linkId = params.linkId;
+  const trafficSourcePercentages = calculateTrafficSourcePercentages(
+    user.id,
+    linkId,
+  );
+
+  const deviceAnalytics = getDeviceAnalytics(user.id, linkId);
   const [clickActivity, clickActivityByHour] = await Promise.all([
-    getClickActivityLast7Days(user.id),
-    getClickActivityByHour(user.id),
+    getClickActivityLast7Days(user.id, linkId),
+    getClickActivityByHour(user.id, linkId),
   ]);
 
   return {
