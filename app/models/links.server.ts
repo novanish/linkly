@@ -17,20 +17,29 @@ import { db } from '~/db';
 import { isUniqueViolationError } from '~/db/errors.server';
 import { clicks, links, linkSequence } from '~/db/schema.server';
 import { orderByEnum } from '~/db/utils.server';
+import { env } from '~/env/server';
 import { PHISHING_STATUS } from '~/lib/consts';
 import { getStartAndEndDates, toBase62 } from '~/lib/utils';
 import type { UpdateLinkSchema } from '~/validations/link.schema';
 
 async function getURLPhishingStatus(url: string) {
-  console.log('Checking URL phishing status:', url);
-  const status = [
-    PHISHING_STATUS.SAFE,
-    PHISHING_STATUS.PHISHING,
-    PHISHING_STATUS.SUSPICIOUS,
-  ];
-  const randomIndex = Math.floor(Math.random() * status.length);
+  const status = {
+    '-1': PHISHING_STATUS.PHISHING,
+    0: PHISHING_STATUS.SUSPICIOUS,
+    1: PHISHING_STATUS.SAFE,
+  };
 
-  return status[randomIndex];
+  const response = await fetch(env.PHISHING_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-KEY': env.PHISHING_API_KEY,
+    },
+    body: JSON.stringify({ url }),
+  });
+  const data = (await response.json()) as Record<'prediction', 1 | 0 | -1>;
+
+  return status[data.prediction];
 }
 
 export async function createLink(
@@ -97,6 +106,7 @@ export function getOriginalUrl(identifier: string, isShortCode: boolean) {
       originalUrl: true,
       phishingStatus: true,
       trackClicks: true,
+      userId: true,
     },
     where: and(
       isShortCode
