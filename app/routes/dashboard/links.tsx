@@ -35,17 +35,17 @@ export async function loader({ request }: Route.LoaderArgs) {
   const itemsPerPage = clamp({
     min: 7,
     value: paginationSearchParams.itemsPerPage,
-    max: 22,
+    max: 20,
   });
   const search = url.searchParams.get('s');
 
   const { links, totalLinks } = await getLinksData({
-    search,
-    userId: user.id,
-    page,
-    limit: itemsPerPage,
     ...sortParams,
     ...filterSearchParams,
+    page,
+    search,
+    userId: user.id,
+    limit: itemsPerPage,
   });
 
   return { user, totalLinks, links };
