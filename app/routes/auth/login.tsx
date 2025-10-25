@@ -24,12 +24,16 @@ import {
 } from '~/lib/rate-limiter.server';
 import { sec } from '~/lib/utils';
 import type { Route } from './+types/login';
+import { HoneypotInputs } from 'remix-utils/honeypot/react';
+import { honeypot } from '~/lib/honeypot.server';
+import { SpamError } from 'remix-utils/honeypot/server';
 
 const options: RateLimiterOptions = {
   limit: 20,
   duration: sec('1hr'),
   name: 'login',
 };
+
 export async function loader({ request }: Route.LoaderArgs) {
   await authSession.redirectIfLoggedIn(request);
   const ip = getClientIPAddress(request);
@@ -48,6 +52,17 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
+  const formData = await request.formData();
+
+  try {
+    await honeypot.check(formData);
+  } catch (error) {
+    if (error instanceof SpamError) {
+      throw new Response('Form not submitted properly', { status: 400 });
+    }
+    throw error;
+  }
+
   await authSession.redirectIfLoggedIn(request);
   const ip = getClientIPAddress(request);
   const result = await rateLimiter.consume(ip!, options);
@@ -60,7 +75,6 @@ export async function action({ request }: Route.ActionArgs) {
     });
   }
 
-  const formData = await request.formData();
   const validationResult = z.email().safeParse(formData.get('email'));
   if (validationResult.error) {
     const errorMessage =
@@ -165,6 +179,8 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
                   disabled={isSubmitting}
                 />
               </div>
+
+              <HoneypotInputs />
 
               <div className="relative flex items-center justify-center">
                 <div className="absolute inset-0 flex items-center">

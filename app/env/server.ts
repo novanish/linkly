@@ -5,6 +5,7 @@ const envSchema = z.object({
   DATABASE_URL: z.url(),
   REDIS_URL: z.url(),
   AUTH_SESSION_SECRET: z.string(),
+  HONEYPOT_SECRET: z.string(),
   GOOGLE_CLIENT_ID: z.string(),
   GOOGLE_CLIENT_SECRET: z.string(),
   RESEND_API_KEY: z.string(),

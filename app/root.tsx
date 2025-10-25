@@ -9,6 +9,8 @@ import {
 import type { Route } from './+types/root';
 import './app.css';
 import { Toaster } from './components/ui/sonner';
+import { honeypot } from '~/lib/honeypot.server';
+import { HoneypotProvider } from 'remix-utils/honeypot/react';
 
 export const links: Route.LinksFunction = () => [
   { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
@@ -42,8 +44,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function App() {
-  return <Outlet />;
+export async function loader() {
+  const honeyProps = await honeypot.getInputProps();
+  return { honeyProps };
+}
+
+export default function App({ loaderData }: Route.ComponentProps) {
+  return (
+    <HoneypotProvider {...loaderData.honeyProps}>
+      <Outlet />
+    </HoneypotProvider>
+  );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
